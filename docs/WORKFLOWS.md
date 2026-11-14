@@ -45,6 +45,9 @@ flowchart TD
 - Kepala BPBD dapat finalisasi rekomendasi (tidak mengubah ranking numerik).
 
 ## Status model
+
+Pada demo pendataan, penolakan atau persetujuan menutup versi laporan. Revisi dimulai sebagai versi baru dan riwayat pemeriksaan tetap tersimpan. Satu kecamatan dapat memiliki beberapa petugas, dengan satu laporan aktif (draf atau menunggu verifikasi) dalam satu waktu. Ringkasan admin menghitung kecamatan terverifikasi berdasarkan versi terbaru. Saat ini halaman penilaian memakai ronde simulasi awal.
+
 ### disaster_case
 `DRAFT -> DATA_COLLECTION -> READY_FOR_ROUND -> IN_ASSESSMENT -> FINALIZED` (case may later start new round).
 ### field_report

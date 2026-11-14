@@ -2,7 +2,7 @@
 
 SiBantu (Sistem Informasi Bantuan) adalah prototipe GDSS untuk menentukan prioritas kecamatan penerima bantuan logistik pascagempa.
 
-## Menjalankan demo penilaian Python
+## Menjalankan SiBantu
 
 Jalankan dari folder ini dengan Python 3.10+.
 
@@ -13,11 +13,19 @@ python app.py
 
 Buka http://127.0.0.1:5000. Pilih peran, isi 15 pasangan AHP, cek konsistensi, lalu kirim. Ulangi untuk tiga peran. Ranking TOPSIS muncul per peran, dan Borda muncul di **Hasil kelompok** setelah penilaian ketiga dikirim. Dari sana, gunakan **Sahkan sebagai Kepala BPBD**.
 
-Demo lokal ini memakai satu snapshot awal dari `examples/seed_case.json` dan pemilih peran tanpa login. Autentikasi, pendataan, verifikasi, serta pembuatan ronde baru berada di luar tahap ini. SQLite menyimpan snapshot, draf, hasil, dan waktu pengesahan di `instance/assessment.sqlite3`. Untuk mencoba ronde demo kosong dengan tetap menyimpan ronde sebelumnya, gunakan file database baru, misalnya `$env:GDSS_DB_PATH = 'instance/percobaan-2.sqlite3'` sebelum menjalankan aplikasi lagi.
+Demo penilaian memakai snapshot awal dari `examples/seed_case.json`. SQLite menyimpan data dan hasil di `instance/assessment.sqlite3`. Migrasi pendataan berjalan otomatis saat aplikasi dibuka. Untuk memakai database demo kosong sambil menyimpan data sebelumnya, gunakan `$env:GDSS_DB_PATH = 'instance/percobaan-2.sqlite3'` sebelum menjalankan aplikasi lagi.
+
+### Demo pendataan dan verifikasi
+
+1. Buka **Pendataan**. Pilih **Admin**, daftarkan kejadian gempa yang sudah terjadi, tambahkan kecamatan, lalu tugaskan petugas. Centang **Data simulasi** untuk kasus fiktif.
+2. Kembali ke **Pendataan** dan pilih petugas yang ditugaskan. Buka kecamatan di **Tugas saya**, isi observasi, lalu pilih **Kirim untuk verifikasi**. Draf dapat disimpan sebelum semua nilai diisi.
+3. Pilih lagi **Admin**, buka kejadian dan laporan, lalu setujui atau tolak dengan alasan. Petugas dapat mengoreksi lewat versi baru. Admin dapat meninjau versi sebelumnya.
+
+Pemilih peran tersedia untuk demo lokal. Pembuatan ronde dari laporan terverifikasi dan autentikasi masih dalam rencana pengembangan.
 
 Pengujian: `python -m unittest discover -s tests -v`.
 
-**Status:** demo penilaian untuk prototipe UAS. **Bahasa produk:** Indonesia.
+**Status:** demo pendataan, verifikasi, dan penilaian untuk prototipe UAS. **Bahasa produk:** Indonesia.
 
 ## Dokumen yang menjadi sumber kebenaran
 1. [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md): tujuan, konteks, cakupan dan istilah.

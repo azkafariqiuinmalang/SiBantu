@@ -47,6 +47,11 @@ def ahp(comparisons):
                 cr=cr, valid=cr <= CR_LIMIT + TOLERANCE)
 
 
+def field_criterion_values(total, vulnerable, housing, services, stock, required, hours):
+    return [total, housing, vulnerable / total * 100 if total else 0,
+            services, 100 if stock >= required else stock / required * 100, hours]
+
+
 def demo_snapshot(seed):
     districts = []
     for item in seed["districts"]:
@@ -62,8 +67,7 @@ def demo_snapshot(seed):
                 and all(isfinite(value) for value in (stock, required, hours))
                 and stock >= 0 and required > 0 and hours >= 0):
             raise ValueError(f"Data simulasi {item['code']} tidak valid.")
-        values = [total, housing, vulnerable / total * 100 if total else 0,
-                  services, min(100, stock / required * 100), hours]
+        values = field_criterion_values(total, vulnerable, housing, services, stock, required, hours)
         districts.append(dict(code=item["code"], name=item["name"], values=values))
     if len(districts) < 2 or len({item["code"] for item in districts}) != len(districts):
         raise ValueError("Ronde memerlukan minimal dua kode kecamatan unik.")

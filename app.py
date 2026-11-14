@@ -11,6 +11,7 @@ from pathlib import Path
 from flask import Flask, abort, redirect, render_template, request, session, url_for
 
 from decision_engine import CRITERIA, PAIRS, SCALE, VERSION, ahp, borda, demo_snapshot, topsis
+from fieldwork import register_fieldwork
 
 ROOT = Path(__file__).resolve().parent
 ROLES = {
@@ -34,7 +35,6 @@ CREATE TABLE IF NOT EXISTS assessment (
     submitted_at TEXT,
     result TEXT
 );
-PRAGMA user_version = 1;
 """
 
 
@@ -52,11 +52,25 @@ def create_app(database=None):
     def connect():
         connection = sqlite3.connect(db_path)
         connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
         return closing(connection)
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with connect() as db, db:
-        db.executescript(SCHEMA)
+        db.execute("BEGIN IMMEDIATE")
+        version = db.execute("PRAGMA user_version").fetchone()[0]
+        if version > 2:
+            raise RuntimeError("Versi database lebih baru dari aplikasi.")
+        if version == 0:
+            for statement in SCHEMA.split(";"):
+                if statement.strip():
+                    db.execute(statement)
+        if version < 2:
+            migration = (ROOT / "migrations" / "002_fieldwork.sql").read_text(encoding="utf-8")
+            for statement in migration.split(";"):
+                if statement.strip():
+                    db.execute(statement)
+            db.execute("PRAGMA user_version = 2")
         existing = db.execute("SELECT algorithm_version FROM assessment_round WHERE id = 1").fetchone()
         if existing is None:
             seed = json.loads((ROOT / "examples" / "seed_case.json").read_text(encoding="utf-8"))
@@ -102,6 +116,8 @@ def create_app(database=None):
         token = session.get("form_token")
         if not token or not secrets.compare_digest(token.encode(), request.form.get("token", "").encode()):
             abort(400, "Muat ulang halaman dan coba lagi.")
+
+    register_fieldwork(app, connect, check_form)
 
     @app.get("/")
     def index():

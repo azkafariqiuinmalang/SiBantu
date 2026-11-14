@@ -63,6 +63,18 @@ summary { cursor: pointer; color: var(--accent-dark); font-weight: 650; }
 .cr { font-size: 1.7rem; color: var(--text); font-weight: 750; }
 .cr span { font-size: .9rem; color: var(--muted); }
 .alert { background: #fff0eb; border: 1px solid #e5aa96; color: #772f1b; padding: .65rem .85rem; border-radius: .5rem; }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; margin-top: 1rem; }
+.field-grid label, .review-note { display: grid; gap: .25rem; font-size: .9rem; font-weight: 650; align-content: start; }
+.field-grid input:not([type=checkbox]), textarea {
+  width: 100%; padding: .48rem; border: 1px solid #9bafa4; border-radius: .45rem;
+  background: var(--panel); color: var(--text); font: inherit; font-weight: 400;
+}
+.field-grid small { color: var(--muted); font-weight: 400; }
+.field-grid .check { display: flex; align-items: center; align-self: center; }
+.role-picker { display: flex; gap: .55rem; flex-wrap: wrap; margin-top: .75rem; }
+.role-picker select { width: auto; max-width: 100%; }
+.district-row { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.review-note { margin-top: 1rem; }
 
 @media (max-width: 52rem) {
   .work-area { display: flex; flex-direction: column-reverse; gap: 0; }
@@ -71,5 +83,5 @@ summary { cursor: pointer; color: var(--accent-dark); font-weight: 650; }
 @media (max-width: 36rem) {
   .shell { width: calc(100% - 1.5rem); }
   main { padding-top: 1.5rem; }
-  .roles, .pair { grid-template-columns: 1fr; }
+  .roles, .pair, .field-grid { grid-template-columns: 1fr; }
 }

@@ -11,6 +11,7 @@
     <div class="shell top-inner">
       <a class="brand" href="{{ url_for('index') }}">SiBantu</a>
       <nav aria-label="Navigasi utama">
+        <a href="{{ url_for('fieldwork_home') }}">Pendataan</a>
         <a href="{{ url_for('index') }}" {% if section == 'assessment' %}aria-current="page"{% endif %}>Penilaian</a>
         <a href="{{ url_for('group_results') }}" {% if section == 'results' %}aria-current="page"{% endif %}>Hasil kelompok</a>
       </nav>
