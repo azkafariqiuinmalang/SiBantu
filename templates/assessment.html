@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ 'Hasil kelompok' if section == 'results' else 'Penilaian AHP' }} | SiBantu</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='assessment.css') }}">
+</head>
+<body>
+  <header class="top">
+    <div class="shell top-inner">
+      <a class="brand" href="{{ url_for('index') }}">SiBantu</a>
+      <nav aria-label="Navigasi utama">
+        <a href="{{ url_for('index') }}" {% if section == 'assessment' %}aria-current="page"{% endif %}>Penilaian</a>
+        <a href="{{ url_for('group_results') }}" {% if section == 'results' %}aria-current="page"{% endif %}>Hasil kelompok</a>
+      </nav>
+    </div>
+  </header>
+  <main class="shell">
+    <div class="intro">
+      <span class="badge">Simulasi</span>
+      <h1>{{ 'Hasil kelompok' if section == 'results' else 'Penilaian prioritas bantuan' }}</h1>
+      <p>{{ snapshot.name.split(' (SIMULASI)')[0] }} · Ronde 1 · {{ snapshot.districts | length }} kecamatan</p>
+    </div>
+    {% set progress = results | length %}
+    <aside class="panel progress">
+      <div class="section-head">
+        <h2>Pengambil keputusan</h2>
+        <span>{{ progress }} dari {{ roles | length }} penilaian dikirim</span>
+      </div>
+      <div class="roles">
+        {% for key, label in roles.items() %}
+          <a href="{{ url_for('assessment', role=key) }}" {% if role == key %}aria-current="page"{% endif %}>
+            <strong>{{ label }}</strong>
+            <span class="{{ 'complete' if key in results else '' }}">{{ 'Dikirim' if key in results else 'Draf' if key in assessments else 'Belum diisi' }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </aside>
+    {% if message %}<p class="alert" role="alert">{{ message }}</p>{% endif %}
+
+    {% if section == 'assessment' %}
+    <details class="panel snapshot">
+      <summary>Data kecamatan yang dikunci untuk ronde ini</summary>
+      <p>{{ snapshot.source }}</p>
+      <p>Waktu kejadian <time datetime="{{ snapshot.incident_at }}">{{ snapshot.incident_at }}</time> · Snapshot dikunci <time datetime="{{ record.locked_at }}">{{ record.locked_at }}</time></p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel kondisi kecamatan"><table>
+        <thead><tr><th scope="col">Kecamatan</th>{% for code, name, unit, direction in criteria %}
+          <th scope="col">{{ code }}<br><small>{{ name }} ({{ unit }})</small></th>
+        {% endfor %}</tr></thead>
+        <tbody>{% for district in snapshot.districts %}<tr><th scope="row">{{ district.name }}</th>
+          {% for value in district['values'] %}<td>{{ '%g' | format(value) }}</td>{% endfor %}
+        </tr>{% endfor %}</tbody>
+      </table></div>
+      <p>C5 bertipe <em>cost</em>. Kecukupan logistik yang lebih rendah meningkatkan prioritas jika kriteria lain sama.</p>
+    </details>
+
+    <div class="work-area">
+      <section class="panel">
+        <h2>Perbandingan berpasangan AHP</h2>
+        {% if role in results %}
+          <p>Penilaian {{ roles[role] }} terkunci sejak <time datetime="{{ active.submitted_at }}">{{ active.submitted_at }}</time>.</p>
+        {% else %}
+          <p>Tentukan kriteria yang lebih penting untuk setiap pasangan. Skala Saaty berjalan dari 1 (sama penting) hingga 9 (mutlak lebih penting).</p>
+        {% endif %}
+        <form method="post" action="{{ url_for('assessment', role=role) }}">
+          <input type="hidden" name="token" value="{{ token }}">
+          <input type="hidden" name="revision" value="{{ form_revision if form_revision is not none else active.revision if active else 0 }}">
+          <div class="pairs">
+          {% for i, j in pairs %}
+            {% set idx = loop.index0 %}
+            {% set left = criteria[i] %}
+            {% set right = criteria[j] %}
+            <div class="pair">
+              <label for="pair-{{ idx }}">
+                <strong>{{ left[0] }}</strong> {{ left[1] }}
+                <span class="versus">dan</span>
+                <strong>{{ right[0] }}</strong> {{ right[1] }}
+              </label>
+              <select name="pair_{{ idx }}" id="pair-{{ idx }}" {% if role in results %}disabled{% endif %}>
+                <option value="">Pilih perbandingan</option>
+                <option value="1" {% if choices[idx] == '1' %}selected{% endif %}>1 · Sama penting</option>
+                <optgroup label="{{ left[0] }} lebih penting">{% for value in scale[9:] %}
+                  <option value="{{ value }}" {% if choices[idx] == value %}selected{% endif %}>{{ value }} · {{ left[0] }} lebih penting</option>
+                {% endfor %}</optgroup>
+                <optgroup label="{{ right[0] }} lebih penting">{% for value in scale[:8] | reverse %}
+                  <option value="{{ value }}" {% if choices[idx] == value %}selected{% endif %}>{{ value[2:] }} · {{ right[0] }} lebih penting</option>
+                {% endfor %}</optgroup>
+              </select>
+            </div>
+          {% endfor %}
+          </div>
+          {% if role not in results %}
+          <div class="actions">
+            <button name="action" value="draft" class="secondary">Simpan draf</button>
+            <button name="action" value="preview" class="secondary">Cek konsistensi</button>
+            <button name="action" value="submit">Kirim penilaian</button>
+          </div>
+          {% endif %}
+        </form>
+      </section>
+
+      <section class="panel metrics" aria-label="Hasil AHP">
+        <h2>Konsistensi AHP</h2>
+        {% if preview %}
+          <p class="cr">{{ '%.4f' | format(preview.cr) }} <span>{{ 'Konsisten' if preview.valid else 'Perlu revisi' }}</span></p>
+          <p>CR ≤ 0,10 · CI {{ '%.4f' | format(preview.ci) }} · λ maks {{ '%.4f' | format(preview.lambda_max) }}</p>
+          <table>
+            <thead><tr><th scope="col">Kriteria</th><th scope="col">Bobot</th></tr></thead>
+            <tbody>{% for weight in preview.weights %}<tr><th scope="row">{{ criteria[loop.index0][0] }}</th>
+              <td>{{ '%.2f' | format(weight * 100) }}%</td></tr>{% endfor %}</tbody>
+          </table>
+          <details class="matrix">
+            <summary>Matriks perbandingan AHP</summary>
+            <div class="table-wrap"><table>
+              <thead><tr><th scope="col">Kriteria</th>{% for criterion in criteria %}<th scope="col">{{ criterion[0] }}</th>{% endfor %}</tr></thead>
+              <tbody>{% for row in preview.matrix %}<tr><th scope="row">{{ criteria[loop.index0][0] }}</th>
+                {% for value in row %}<td>{{ '%.3f' | format(value) }}</td>{% endfor %}
+              </tr>{% endfor %}</tbody>
+            </table></div>
+          </details>
+        {% else %}
+          <p>Isi 15 perbandingan, lalu klik <strong>Cek konsistensi</strong> untuk melihat bobot dan nilai CR.</p>
+        {% endif %}
+      </section>
+    </div>
+    {% endif %}
+
+    {% macro topsis_details(result, label) %}
+      <section class="panel">
+        <h2>TOPSIS · {{ label }}</h2>
+        {% if result.identical %}<p>Seluruh alternatif identik. Nilai preferensi ditetapkan 0,5.</p>{% endif %}
+        {% if result.zero_columns %}<p>Kolom bernilai nol: {{ result.zero_columns | join(', ') }}.</p>{% endif %}
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">Peringkat</th><th scope="col">Kecamatan</th><th scope="col">D+</th>
+            <th scope="col">D−</th><th scope="col">Preferensi</th></tr></thead>
+          <tbody>{% for row in result.rows %}<tr><td>{{ row.rank }}</td><th scope="row">{{ row.name }}</th>
+            <td>{{ '%.5f' | format(row.positive) }}</td><td>{{ '%.5f' | format(row.negative) }}</td>
+            <td>{{ '%.5f' | format(row.score) }}{% if row.tied %} <small>(seri skor)</small>{% endif %}</td>
+          </tr>{% endfor %}</tbody>
+        </table></div>
+        <details class="matrix">
+          <summary>Rincian normalisasi dan solusi ideal</summary>
+          {% if result.rows | selectattr('tied') | list %}<p>Skor seri diurutkan berdasarkan kode kecamatan untuk penghitungan Borda.</p>{% endif %}
+          <div class="table-wrap"><table>
+            <thead><tr><th scope="col">Ukuran</th>{% for criterion in criteria %}<th scope="col">{{ criterion[0] }}</th>{% endfor %}</tr></thead>
+            <tbody>
+              {% for label, values in [('Pembagi normalisasi', result.norms), ('Ideal positif', result.best), ('Ideal negatif', result.worst)] %}
+              <tr><th scope="row">{{ label }}</th>{% for value in values %}<td>{{ '%.5f' | format(value) }}</td>{% endfor %}</tr>
+              {% endfor %}
+              {% for row in result.rows %}
+              <tr><th scope="row">{{ row.code }} · Normalisasi</th>{% for value in row.normalized %}<td>{{ '%.5f' | format(value) }}</td>{% endfor %}</tr>
+              <tr><th scope="row">{{ row.code }} · Terbobot</th>{% for value in row.weighted %}<td>{{ '%.5f' | format(value) }}</td>{% endfor %}</tr>
+              {% endfor %}
+            </tbody>
+          </table></div>
+        </details>
+      </section>
+    {% endmacro %}
+
+    {% if section == 'assessment' and role in results %}
+      {{ topsis_details(results[role].topsis, roles[role]) }}
+      <p><a class="button-link" href="{{ url_for('group_results') }}">Lihat hasil kelompok</a></p>
+    {% endif %}
+
+    {% if section == 'results' %}
+      <section class="panel">
+        <div class="section-head"><h2>Rekomendasi prioritas · Borda</h2>
+          {% if group %}<span class="badge">{{ 'Disahkan' if record.finalized_at else 'Menunggu pengesahan' }}</span>{% endif %}
+        </div>
+        {% if group %}
+          <p>Poin tiga pengambil keputusan dijumlahkan dengan bobot setara. Jika total seri, peringkat Kepala BPBD menjadi pemecah seri sementara.</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th scope="col">Peringkat</th><th scope="col">Kecamatan</th>
+              {% for label in roles.values() %}<th scope="col">{{ label }}</th>{% endfor %}
+              <th scope="col">Total</th></tr></thead>
+            <tbody>{% for row in group %}<tr><td>{{ row.rank }}</td><th scope="row">{{ row.name }}</th>
+              {% for point in row.points %}<td>{{ point }}</td>{% endfor %}
+              <td><strong>{{ row.total }}</strong>{% if row.tied %} <small>(seri)</small>{% endif %}</td>
+            </tr>{% endfor %}</tbody>
+          </table></div>
+          {% if record.finalized_at %}
+            <p>Disahkan sebagai Kepala BPBD pada <time datetime="{{ record.finalized_at }}">{{ record.finalized_at }}</time>.</p>
+          {% else %}
+            <form class="actions" method="post" action="{{ url_for('finalize') }}">
+              <input type="hidden" name="token" value="{{ token }}">
+              <button type="submit">Sahkan sebagai Kepala BPBD</button>
+            </form>
+          {% endif %}
+        {% else %}
+          <p>Borda dihitung setelah ketiga pengambil keputusan mengirim penilaian AHP yang konsisten.</p>
+        {% endif %}
+      </section>
+      {% if group %}{% for key, label in roles.items() %}{{ topsis_details(results[key].topsis, label) }}{% endfor %}{% endif %}
+    {% endif %}
+  </main>
+</body>
+</html>

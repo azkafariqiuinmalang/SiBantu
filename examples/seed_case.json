@@ -1,0 +1,99 @@
+{
+  "is_simulation": true,
+  "case_code": "SIM-GMP-001",
+  "name": "Gempa Kabupaten X (SIMULASI)",
+  "incident_at": "2026-11-14T00:00:00+07:00",
+  "province": "Jawa Timur",
+  "regency": "Kabupaten X",
+  "information_source": "Data fiktif untuk pengujian UAS; bukan laporan BMKG atau BNPB",
+  "assessment_baseline_at": "2026-11-14T12:00:00+07:00",
+  "criteria": [
+    {
+      "code": "C1",
+      "direction": "benefit",
+      "unit": "orang"
+    },
+    {
+      "code": "C2",
+      "direction": "benefit",
+      "unit": "1-5"
+    },
+    {
+      "code": "C3",
+      "direction": "benefit",
+      "unit": "%"
+    },
+    {
+      "code": "C4",
+      "direction": "benefit",
+      "unit": "1-5"
+    },
+    {
+      "code": "C5",
+      "direction": "cost",
+      "unit": "%"
+    },
+    {
+      "code": "C6",
+      "direction": "benefit",
+      "unit": "jam"
+    }
+  ],
+  "districts": [
+    {
+      "code": "A1",
+      "name": "Kecamatan A",
+      "evacuees": 1500,
+      "vulnerable_people": 360,
+      "housing_damage_score": 4,
+      "essential_services_disruption_score": 3,
+      "available_package_equivalents": 350,
+      "required_package_equivalents": 1000,
+      "hours_since_last_delivery": 18
+    },
+    {
+      "code": "A2",
+      "name": "Kecamatan B",
+      "evacuees": 2100,
+      "vulnerable_people": 378,
+      "housing_damage_score": 5,
+      "essential_services_disruption_score": 4,
+      "available_package_equivalents": 200,
+      "required_package_equivalents": 1000,
+      "hours_since_last_delivery": 12
+    },
+    {
+      "code": "A3",
+      "name": "Kecamatan C",
+      "evacuees": 900,
+      "vulnerable_people": 342,
+      "housing_damage_score": 3,
+      "essential_services_disruption_score": 5,
+      "available_package_equivalents": 150,
+      "required_package_equivalents": 1000,
+      "hours_since_last_delivery": 30
+    },
+    {
+      "code": "A4",
+      "name": "Kecamatan D",
+      "evacuees": 1300,
+      "vulnerable_people": 260,
+      "housing_damage_score": 2,
+      "essential_services_disruption_score": 2,
+      "available_package_equivalents": 650,
+      "required_package_equivalents": 1000,
+      "hours_since_last_delivery": 8
+    },
+    {
+      "code": "A5",
+      "name": "Kecamatan E",
+      "evacuees": 700,
+      "vulnerable_people": 210,
+      "housing_damage_score": 4,
+      "essential_services_disruption_score": 4,
+      "available_package_equivalents": 100,
+      "required_package_equivalents": 1000,
+      "hours_since_last_delivery": 36
+    }
+  ]
+}
