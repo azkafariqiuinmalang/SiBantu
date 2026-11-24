@@ -1,0 +1,57 @@
+{
+  "case_code": "GB-SIM-MLG-001",
+  "name": "Simulasi Gempa Malang Raya - Empat Kecamatan",
+  "is_simulation": true,
+  "incident_at": "2026-11-17T08:15:00+07:00",
+  "observed_at": "2026-11-20T14:00:00+07:00",
+  "province": "Jawa Timur",
+  "regency": "Malang Raya",
+  "information_source": "SIMULASI UAS SiBantu. Semua angka fiktif untuk latihan, bukan laporan kejadian gempa atau survei aktual.",
+  "districts": [
+    {
+      "code": "35.07.29",
+      "name": "Gedangan",
+      "evacuees": 1600,
+      "vulnerable_people": 320,
+      "housing_damage_score": 4,
+      "essential_services_disruption_score": 4,
+      "available_package_equivalents": 100,
+      "required_package_equivalents": 600,
+      "distance_to_epicenter_km": 38
+    },
+    {
+      "code": "35.07.04",
+      "name": "Sumbermanjing Wetan",
+      "evacuees": 1850,
+      "vulnerable_people": 555,
+      "housing_damage_score": 5,
+      "essential_services_disruption_score": 4,
+      "available_package_equivalents": 200,
+      "required_package_equivalents": 700,
+      "distance_to_epicenter_km": 52
+    },
+    {
+      "code": "35.07.05",
+      "name": "Dampit",
+      "evacuees": 2100,
+      "vulnerable_people": 840,
+      "housing_damage_score": 3,
+      "essential_services_disruption_score": 3,
+      "available_package_equivalents": 350,
+      "required_package_equivalents": 800,
+      "distance_to_epicenter_km": 44
+    },
+    {
+      "code": "35.07.30",
+      "name": "Tirtoyudo",
+      "evacuees": 1200,
+      "vulnerable_people": 540,
+      "housing_damage_score": 4,
+      "essential_services_disruption_score": 5,
+      "available_package_equivalents": 80,
+      "required_package_equivalents": 500,
+      "distance_to_epicenter_km": 61
+    }
+  ],
+  "criteria_version": "2.0"
+}

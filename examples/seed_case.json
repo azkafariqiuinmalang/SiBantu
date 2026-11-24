@@ -36,7 +36,7 @@
     {
       "code": "C6",
       "direction": "benefit",
-      "unit": "jam"
+      "unit": "km"
     }
   ],
   "districts": [
@@ -49,7 +49,7 @@
       "essential_services_disruption_score": 3,
       "available_package_equivalents": 350,
       "required_package_equivalents": 1000,
-      "hours_since_last_delivery": 18
+      "distance_to_epicenter_km": 38
     },
     {
       "code": "A2",
@@ -60,7 +60,7 @@
       "essential_services_disruption_score": 4,
       "available_package_equivalents": 200,
       "required_package_equivalents": 1000,
-      "hours_since_last_delivery": 12
+      "distance_to_epicenter_km": 52
     },
     {
       "code": "A3",
@@ -71,7 +71,7 @@
       "essential_services_disruption_score": 5,
       "available_package_equivalents": 150,
       "required_package_equivalents": 1000,
-      "hours_since_last_delivery": 30
+      "distance_to_epicenter_km": 44
     },
     {
       "code": "A4",
@@ -82,7 +82,7 @@
       "essential_services_disruption_score": 2,
       "available_package_equivalents": 650,
       "required_package_equivalents": 1000,
-      "hours_since_last_delivery": 8
+      "distance_to_epicenter_km": 61
     },
     {
       "code": "A5",
@@ -93,7 +93,8 @@
       "essential_services_disruption_score": 4,
       "available_package_equivalents": 100,
       "required_package_equivalents": 1000,
-      "hours_since_last_delivery": 36
+      "distance_to_epicenter_km": 27
     }
-  ]
+  ],
+  "criteria_version": "2.0"
 }

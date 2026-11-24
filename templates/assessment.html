@@ -5,24 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ 'Hasil kelompok' if section == 'results' else 'Penilaian AHP' }} | SiBantu</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='assessment.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='ahp-form.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+  <script src="{{ url_for('static', filename='ahp-form.js') }}" defer></script>
 </head>
 <body>
-  <header class="top">
-    <div class="shell top-inner">
-      <a class="brand" href="{{ url_for('index') }}">SiBantu</a>
-      <nav aria-label="Navigasi utama">
-        <a href="{{ url_for('fieldwork_home') }}">Pendataan</a>
-        <a href="{{ url_for('index') }}" {% if section == 'assessment' %}aria-current="page"{% endif %}>Penilaian</a>
-        <a href="{{ url_for('group_results') }}" {% if section == 'results' %}aria-current="page"{% endif %}>Hasil kelompok</a>
-      </nav>
-    </div>
-  </header>
-  <main class="shell">
+  {% include '_navigation.html' %}
+  <main class="shell" id="konten">
     <div class="intro">
-      <span class="badge">Simulasi</span>
+      {% if snapshot.get('is_simulation',true) %}<span class="badge">Simulasi</span>{% endif %}
       <h1>{{ 'Hasil kelompok' if section == 'results' else 'Penilaian prioritas bantuan' }}</h1>
-      <p>{{ snapshot.name.split(' (SIMULASI)')[0] }} · Ronde 1 · {{ snapshot.districts | length }} kecamatan</p>
+      <p>{{ snapshot.name.split(' (SIMULASI)')[0] }} · Ronde {{ record.id }} · {{ snapshot.districts | length }} kecamatan</p>
+      {% if record.case_id %}<a href="{{ url_for('fieldwork_case',case_id=record.case_id) }}">Lihat pendataan kejadian</a>{% endif %}
     </div>
+    {% if is_legacy %}<p class="simulation-note">Ronde ini adalah arsip dengan definisi C6 sebelumnya. Penilaian baru menggunakan ronde terbaru dengan C6 jarak posko induk ke titik gempa (km).</p>{% endif %}
+    {% if rounds|length > 1 %}<form class="round-selector" method="get">
+      <label for="round_id">Ronde penilaian</label><select name="round_id" id="round_id">
+        {% for item in rounds %}<option value="{{ item.id }}" {% if item.id == record.id %}selected{% endif %}>Ronde {{ item.id }} · {{ item.name }}</option>{% endfor %}
+      </select><button class="secondary">Tampilkan</button>
+    </form>{% endif %}
     {% set progress = results | length %}
     <aside class="panel progress">
       <div class="section-head">
@@ -31,10 +33,10 @@
       </div>
       <div class="roles">
         {% for key, label in roles.items() %}
-          <a href="{{ url_for('assessment', role=key) }}" {% if role == key %}aria-current="page"{% endif %}>
+          <div class="role-status">
             <strong>{{ label }}</strong>
             <span class="{{ 'complete' if key in results else '' }}">{{ 'Dikirim' if key in results else 'Draf' if key in assessments else 'Belum diisi' }}</span>
-          </a>
+          </div>
         {% endfor %}
       </div>
     </aside>
@@ -44,7 +46,7 @@
     <details class="panel snapshot">
       <summary>Data kecamatan yang dikunci untuk ronde ini</summary>
       <p>{{ snapshot.source }}</p>
-      <p>Waktu kejadian <time datetime="{{ snapshot.incident_at }}">{{ snapshot.incident_at }}</time> · Snapshot dikunci <time datetime="{{ record.locked_at }}">{{ record.locked_at }}</time></p>
+      <p>Waktu kejadian <time datetime="{{ snapshot.incident_at }}">{{ snapshot.incident_at|datetime_display_wib }}</time> · Snapshot dikunci <time datetime="{{ record.locked_at }}">{{ record.locked_at|datetime_display_wib }}</time></p>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel kondisi kecamatan"><table>
         <thead><tr><th scope="col">Kecamatan</th>{% for code, name, unit, direction in criteria %}
           <th scope="col">{{ code }}<br><small>{{ name }} ({{ unit }})</small></th>
@@ -62,37 +64,40 @@
         {% if role in results %}
           <p>Penilaian {{ roles[role] }} terkunci sejak <time datetime="{{ active.submitted_at }}">{{ active.submitted_at }}</time>.</p>
         {% else %}
-          <p>Tentukan kriteria yang lebih penting untuk setiap pasangan. Skala Saaty berjalan dari 1 (sama penting) hingga 9 (mutlak lebih penting).</p>
+          <p>Pilih kriteria yang lebih penting untuk menentukan prioritas bantuan, lalu pilih seberapa besar perbedaannya. Tidak ada jawaban yang diisi otomatis.</p>
         {% endif %}
-        <form method="post" action="{{ url_for('assessment', role=role) }}">
+        <form class="ahp-form" data-review="{{ 'true' if preview else 'false' }}" method="post" action="{{ url_for('assessment', role=role,round_id=record.id) }}">
           <input type="hidden" name="token" value="{{ token }}">
+          <input type="hidden" name="round_id" value="{{ record.id }}">
           <input type="hidden" name="revision" value="{{ form_revision if form_revision is not none else active.revision if active else 0 }}">
           <div class="pairs">
           {% for i, j in pairs %}
             {% set idx = loop.index0 %}
             {% set left = criteria[i] %}
             {% set right = criteria[j] %}
-            <div class="pair">
+            <div class="pair" data-left="{{ left[1] }}" data-right="{{ right[1] }}">
               <label for="pair-{{ idx }}">
                 <strong>{{ left[0] }}</strong> {{ left[1] }}
                 <span class="versus">dan</span>
                 <strong>{{ right[0] }}</strong> {{ right[1] }}
               </label>
-              <select name="pair_{{ idx }}" id="pair-{{ idx }}" {% if role in results %}disabled{% endif %}>
+              <select name="pair_{{ idx }}" id="pair-{{ idx }}" {% if role in results or is_legacy %}disabled{% endif %}>
                 <option value="">Pilih perbandingan</option>
-                <option value="1" {% if choices[idx] == '1' %}selected{% endif %}>1 · Sama penting</option>
+                <option value="1" {% if choices[idx] == '1' %}selected{% endif %}>Keduanya sama penting</option>
+                {% set strengths = {2:'Nilai antara sama penting dan sedikit lebih penting',3:'Sedikit lebih penting',4:'Nilai antara sedikit dan kuat',5:'Lebih penting secara kuat',6:'Nilai antara kuat dan sangat',7:'Sangat lebih penting',8:'Nilai antara sangat dan mutlak',9:'Mutlak lebih penting'} %}
                 <optgroup label="{{ left[0] }} lebih penting">{% for value in scale[9:] %}
-                  <option value="{{ value }}" {% if choices[idx] == value %}selected{% endif %}>{{ value }} · {{ left[0] }} lebih penting</option>
+                  <option value="{{ value }}" {% if choices[idx] == value %}selected{% endif %}>{{ left[1] }}: {{ strengths[value|int] }} ({{ value }})</option>
                 {% endfor %}</optgroup>
                 <optgroup label="{{ right[0] }} lebih penting">{% for value in scale[:8] | reverse %}
-                  <option value="{{ value }}" {% if choices[idx] == value %}selected{% endif %}>{{ value[2:] }} · {{ right[0] }} lebih penting</option>
+                  <option value="{{ value }}" {% if choices[idx] == value %}selected{% endif %}>{{ right[1] }}: {{ strengths[value[2:]|int] }} ({{ value[2:] }})</option>
                 {% endfor %}</optgroup>
               </select>
             </div>
           {% endfor %}
           </div>
-          {% if role not in results %}
-          <div class="actions">
+          {% if role not in results and not is_legacy %}
+          <p class="ahp-save-note">Jawaban tersimpan ke database setelah Anda menekan <strong>Simpan draf</strong> atau <strong>Kirim penilaian</strong>. Cek konsistensi hanya menampilkan perhitungan sementara.</p>
+          <div class="actions ahp-actions">
             <button name="action" value="draft" class="secondary">Simpan draf</button>
             <button name="action" value="preview" class="secondary">Cek konsistensi</button>
             <button name="action" value="submit">Kirim penilaian</button>
@@ -161,7 +166,7 @@
 
     {% if section == 'assessment' and role in results %}
       {{ topsis_details(results[role].topsis, roles[role]) }}
-      <p><a class="button-link" href="{{ url_for('group_results') }}">Lihat hasil kelompok</a></p>
+      <p><a class="button-link" href="{{ url_for('group_results',round_id=record.id) }}">Lihat hasil kelompok</a></p>
     {% endif %}
 
     {% if section == 'results' %}
@@ -182,9 +187,10 @@
           </table></div>
           {% if record.finalized_at %}
             <p>Disahkan sebagai Kepala BPBD pada <time datetime="{{ record.finalized_at }}">{{ record.finalized_at }}</time>.</p>
-          {% else %}
-            <form class="actions" method="post" action="{{ url_for('finalize') }}">
+          {% elif current_user.role == 'bpbd' and not is_legacy %}
+            <form class="actions" method="post" action="{{ url_for('finalize',round_id=record.id) }}">
               <input type="hidden" name="token" value="{{ token }}">
+              <input type="hidden" name="round_id" value="{{ record.id }}">
               <button type="submit">Sahkan sebagai Kepala BPBD</button>
             </form>
           {% endif %}

@@ -17,6 +17,10 @@
 - Tidak boleh menghapus data, merombak stack, atau mengubah spesifikasi metode tanpa konfirmasi/penjelasan.
 
 ## Business invariants (tidak boleh dilanggar)
+- Pembaruan 20 November 2026: tiga role login `bpbd`, `lapangan`, `sosial`; admin adalah tugas Kepala BPBD dan pendataan adalah tugas Koordinator Lapangan. Seluruh halaman internal memerlukan login.
+- Revisi 21 November 2026: C6 sudah disetujui menjadi jarak posko induk ke titik gempa (km), benefit. Gunakan criteria_version/algorithm_version 2.0 untuk laporan/ronde baru. Jam versi 1.0 tidak boleh dikonversi atau dilabeli sebagai kilometer. Perubahan metode lainnya masih ditunda.
+- Koordinator melihat Tugas saya, bukan daftar administrasi kejadian. Form observasi menggunakan kalender/jam WIB. Ronde versi 1.0 menjadi arsip baca-saja; data dan hasilnya tetap disimpan.
+- Permintaan 21 November 2026: simulasi empat kecamatan Gedangan, Sumbermanjing Wetan, Dampit, Tirtoyudo sudah diisi. Data lapangan fiktif boleh disiapkan; penilaian DM harus tetap diisi sendiri. Gunakan decision_rounds/round_assessments untuk ronde per kejadian; tabel legacy dipertahankan. Jangan mereset data/hasil ronde lama ketika membuat simulasi atau ronde baru.
 - **Kejadian gempa harus sudah terjadi / diketahui** untuk didaftarkan; bukan fitur prediksi.
 - Admin mendaftarkan kejadian → pendataan per kecamatan → admin verifikasi → snapshot locked → 3 DM AHP → 3 TOPSIS → Borda → finalisasi.
 - Data lapangan dinilai petugas/koordinator; DM **menilai kepentingan kriteria**, bukan mengarang nilai kondisi wilayah.
@@ -41,7 +45,7 @@
 Kebutuhan diterapkan, input salah ditolak, unauthorized ditolak, valid state transition, test pass, UI error/success states bekerja, dokumentasi diubah, dan tidak mengubah hasil round terkunci.
 
 ## Larangan overengineering
-Tidak perlu AI/LLM, model prediksi gempa, integrasi BMKG real time, peta/routing, inventaris gudang kompleks, distribusi otomatis, multi-tenant enterprise atau microservice.
+Tidak perlu AI/LLM, model prediksi gempa, integrasi BMKG real time, routing, inventaris gudang kompleks, distribusi otomatis, multi-tenant enterprise atau microservice. Peta status pendataan per kecamatan Malang Raya sudah masuk lingkup atas permintaan pengguna.
 
 ## Format laporan kerja agent
 Setelah satu perubahan: `Diubah`, `Alasan`, `Pengujian`, `Risiko/keputusan tertunda`, `Cara menjalankan`. Jangan mengklaim test pass bila tidak dieksekusi.

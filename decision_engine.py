@@ -5,15 +5,21 @@ from math import isfinite, sqrt
 
 CR_LIMIT = 0.10
 TOLERANCE = 1e-12
-VERSION = "1.0"
+VERSION = "2.0"
+SUPPORTED_VERSIONS = ("1.0", VERSION)
 CRITERIA = (
     ("C1", "Jumlah pengungsi", "orang", "benefit"),
     ("C2", "Kerusakan hunian", "skor 1–5", "benefit"),
     ("C3", "Pengungsi kelompok rentan", "%", "benefit"),
     ("C4", "Gangguan layanan dasar", "skor 1–5", "benefit"),
     ("C5", "Kecukupan logistik lokal", "%", "cost"),
-    ("C6", "Waktu sejak bantuan terakhir", "jam", "benefit"),
+    ("C6", "Jarak posko induk ke titik gempa", "km", "benefit"),
 )
+LEGACY_CRITERIA = CRITERIA[:5] + (("C6", "Waktu sejak bantuan terakhir", "jam", "benefit"),)
+
+
+def criteria_for_version(version):
+    return CRITERIA if version == VERSION else LEGACY_CRITERIA
 PAIRS = [(i, j) for i in range(6) for j in range(i + 1, 6)]
 SCALE = [str(Fraction(1, n)) for n in range(9, 1, -1)] + [str(n) for n in range(1, 10)]
 
@@ -47,12 +53,15 @@ def ahp(comparisons):
                 cr=cr, valid=cr <= CR_LIMIT + TOLERANCE)
 
 
-def field_criterion_values(total, vulnerable, housing, services, stock, required, hours):
+def field_criterion_values(total, vulnerable, housing, services, stock, required, distance):
     return [total, housing, vulnerable / total * 100 if total else 0,
-            services, 100 if stock >= required else stock / required * 100, hours]
+            services, 100 if stock >= required else stock / required * 100, distance]
 
 
 def demo_snapshot(seed):
+    if not seed.get("districts"):
+        raise ValueError("Ronde memerlukan minimal dua kecamatan.")
+    version = seed.get("criteria_version", VERSION if "distance_to_epicenter_km" in seed["districts"][0] else "1.0")
     districts = []
     for item in seed["districts"]:
         total = item["evacuees"]
@@ -61,17 +70,18 @@ def demo_snapshot(seed):
         services = item["essential_services_disruption_score"]
         stock = item["available_package_equivalents"]
         required = item["required_package_equivalents"]
-        hours = item["hours_since_last_delivery"]
+        distance = item["distance_to_epicenter_km"] if version == VERSION else item["hours_since_last_delivery"]
         if not (isinstance(total, int) and isinstance(vulnerable, int) and 0 <= vulnerable <= total
                 and housing in range(1, 6) and services in range(1, 6)
-                and all(isfinite(value) for value in (stock, required, hours))
-                and stock >= 0 and required > 0 and hours >= 0):
+                and all(isfinite(value) for value in (stock, required, distance))
+                and stock >= 0 and required > 0 and distance >= 0):
             raise ValueError(f"Data simulasi {item['code']} tidak valid.")
-        values = field_criterion_values(total, vulnerable, housing, services, stock, required, hours)
+        values = field_criterion_values(total, vulnerable, housing, services, stock, required, distance)
         districts.append(dict(code=item["code"], name=item["name"], values=values))
     if len(districts) < 2 or len({item["code"] for item in districts}) != len(districts):
         raise ValueError("Ronde memerlukan minimal dua kode kecamatan unik.")
-    return dict(name=seed["name"], source=seed["information_source"],
+    return dict(name=seed["name"], source=seed["information_source"],criteria_version=version,
+                criteria=list(criteria_for_version(version)),
                 incident_at=seed["incident_at"], districts=districts)
 
 

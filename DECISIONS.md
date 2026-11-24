@@ -1,5 +1,27 @@
 # Decision Log
 
+## Pembaruan 20 November 2026 (menggantikan rancangan aktor awal)
+
+| ID | Keputusan | Status |
+|---|---|---|
+| ADR-011 | Tiga aktor: Kepala BPBD sekaligus admin; Koordinator Lapangan sekaligus pendataan; Perwakilan Dinas Sosial | Arahan pengguna, diterapkan |
+| ADR-012 | Login sebelum dashboard, hak akses berasal dari akun server; pemilih peran demo dihapus | Arahan pengguna, diterapkan |
+| ADR-013 | PostgreSQL Supabase sebagai database target; SQLite untuk uji lokal | Pengguna mengonfirmasi koneksi berhasil; migrasi versi 4 dan tiga akun awal sudah dibuat |
+| ADR-014 | Sesi Flask dan password hash di database; psycopg melalui Session pooler/SSL, schema sibantu | Pilihan implementasi; bukan Supabase Auth |
+| ADR-015 | Dashboard poligon 41 kecamatan Malang Raya dengan status pendataan per kejadian | Arahan pengguna, diterapkan |
+| ADR-016 | Metode perhitungan akan dikonfirmasi kemudian; simulasi AHP/TOPSIS/Borda serta snapshot lama dipertahankan | Arahan pengguna |
+| ADR-017 | Usulan kecamatan koordinator otomatis menjadi tugas pendataannya; Kepala BPBD menyetujui usulan sebelum verifikasi laporan | Pilihan implementasi dari pemetaan operasional |
+| ADR-018 | Kepala BPBD mengelola akun dan status; semua aktor mengganti password sendiri. Versi sesi berubah saat password/status berubah | Implementasi tugas administrasi dan login; aktivitas akun diaudit |
+| ADR-019 | Simulasi empat kecamatan Gedangan, Sumbermanjing Wetan, Dampit, Tirtoyudo; nilai lapangan fiktif, penilaian aktor kosong | Permintaan pengguna 21 November 2026, sudah diisi ke Supabase |
+| ADR-020 | Ronde per kejadian membekukan nilai serta ID/versi laporan; migrasi menyalin ronde legacy tanpa mengubahnya | Diterapkan untuk memisahkan simulasi baru dan penilaian lama |
+| ADR-021 | Peta mempunyai mode wilayah terdampak, status laporan dan prioritas Borda; prioritas baru muncul setelah tiga kiriman | Diterapkan; tidak mengarang skor/sebaran bahaya |
+| ADR-022 | C6 menjadi jarak posko induk ke titik gempa (km), benefit; laporan/ronde baru versi 2.0 | Revisi eksplisit pengguna 21 November 2026, diterapkan dengan arsip versi 1.0 |
+| ADR-023 | Koordinator hanya melihat tugas pendataannya pada halaman utama; waktu observasi berupa kalender/jam WIB | Revisi eksplisit pengguna, termasuk pembaruan formulir dan kartu tugas |
+| ADR-024 | Form AHP ketiga DM bertahap seperti Google Form: pilih kriteria lalu tingkat kepentingan, progres dan tinjauan sebelum kirim | Disetujui pengguna 21 November 2026; tetap 15 pasangan dan seluruh skala Saaty, tanpa perubahan metode |
+| ADR-025 | Tema UI gelap "Pusat Kendali" untuk semua halaman (theme.css, MASTER.md); tetap Flask/Jinja + CSS/JS biasa, tanpa font/CDN eksternal | Permintaan pengguna 24 November 2026 berdasar referensi dashboard komando bencana; tidak mengubah data, rute, atau metode |
+
+Rencana lima metode masih menunggu pembahasan lanjutan. C6 jarak bertipe benefit sudah diterapkan pada versi 2.0; tiga rumus yang tersedia tetap dipakai. Rancangan di bawah merupakan riwayat; bila bertentangan, pembaruan ini berlaku.
+
 ## Keputusan yang disepakati (accepted)
 | ID | Keputusan | Alasan |
 |---|---|---|
@@ -16,7 +38,7 @@
 
 ## Open decisions / perlu validasi
 
-Untuk tahap penilaian, bahasa Python mengikuti arahan pengguna. Implementasi demo lokal memakai Flask dan SQLite dengan satu ronde simulasi dan pemilih peran. Stack untuk fitur lain masih terbuka.
+Bahasa Python dan Flask dipertahankan. SQLite menjadi opsi lokal, PostgreSQL Supabase menjadi database target. Satu ronde penilaian simulasi lama masih tersedia melalui akun masing-masing aktor.
 
 | ID | Item | Default sementara |
 |---|---|---|
@@ -24,7 +46,7 @@ Untuk tahap penilaian, bahasa Python mengikuti arahan pengguna. Implementasi dem
 | OPEN-02 | Data kejadian demo yang digunakan | Semua seed fiktif (SIMULASI) |
 | OPEN-03 | Format rubrik C2, C4 | Skala 1–5 rinci disetujui sebelum implementasi final |
 | OPEN-04 | Rumus operasional kecukupan logistik C5 | Rasio paket-equivalent stok/kebutuhan periode seragam |
-| OPEN-05 | Definisi C6 bila belum menerima bantuan | Jam sejak `assessment_baseline_at` |
+| CLOSED-05 | C6 versi sebelumnya berupa jam | Digantikan ADR-022; tidak berlaku untuk laporan baru |
 | OPEN-06 | Status Kepala BPBD finalisasi | Hanya pengesahan laporan, tidak override matematis |
 | OPEN-07 | Tie pada TOPSIS individual | Sort deterministic by alternative_code untuk presentation dan ranking unik; documented |
 | OPEN-08 | Ketentuan dosen voting saat seri | Gunakan ranking DM1 sementara, konfirmasi jika ada aturan tertulis |

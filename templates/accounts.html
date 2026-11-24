@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ 'Pengguna' if section == 'users' else 'Akun saya' }} | SiBantu</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='assessment.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+</head>
+<body>
+  {% include '_navigation.html' %}
+  <main class="shell" id="konten">
+    <div class="intro"><p class="eyebrow">{{ 'Administrasi' if section == 'users' else 'Pengaturan' }}</p>
+      <h1>{{ 'Pengguna SiBantu' if section == 'users' else 'Akun saya' }}</h1>
+      <p>{{ 'Kelola akses Kepala BPBD, Koordinator Lapangan, dan Perwakilan Dinas Sosial.' if section == 'users' else 'Perbarui kata sandi untuk menjaga akses akun Anda.' }}</p>
+    </div>
+    {% for notice in get_flashed_messages() %}<p class="notice" role="status">{{ notice }}</p>{% endfor %}
+    {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+    {% if section == 'users' %}
+    <section class="panel"><h2>Tambah pengguna</h2>
+      <form method="post" class="account-form">
+        <input type="hidden" name="token" value="{{ csrf_token }}"><input type="hidden" name="action" value="create">
+        <div class="field-grid">
+          <label>Nama lengkap<input name="display_name" maxlength="120" value="{{ request.form.get('display_name','') }}" required></label>
+          <label>Email<input name="email" type="email" maxlength="254" value="{{ request.form.get('email','') }}" autocomplete="off" required></label>
+          <label>Peran<select name="role">{% for key,label in role_labels.items() %}<option value="{{ key }}" {% if request.form.get('role') == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+          <label>Kata sandi awal<input name="password" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required><small>Minimal 12 karakter. Pengguna dapat menggantinya lewat Akun saya.</small></label>
+        </div><button>Buat akun</button>
+      </form>
+    </section>
+    <section class="panel"><div class="section-head"><h2>Daftar pengguna</h2><span>{{ users|length }} akun</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th scope="col">Pengguna</th><th scope="col">Peran</th><th scope="col">Status</th><th scope="col">Tindakan</th></tr></thead>
+        <tbody>{% for item in users %}<tr>
+          <td><strong>{{ item.display_name }}</strong><br><small>{{ item.email }}</small></td>
+          <td>{{ role_labels[item.role] }}</td><td>{{ 'Aktif' if item.is_active else 'Nonaktif' }}</td>
+          <td>{% if item.id == current_user.id %}<a href="{{ url_for('account') }}">Akun saya</a>{% else %}
+            <form method="post" class="compact-form"><input type="hidden" name="token" value="{{ csrf_token }}">
+              <input type="hidden" name="action" value="active"><input type="hidden" name="user_id" value="{{ item.id }}">
+              <input type="hidden" name="is_active" value="{{ 0 if item.is_active else 1 }}">
+              <button class="secondary">{{ 'Nonaktifkan' if item.is_active else 'Aktifkan' }}</button>
+            </form>
+            <details class="reset-password"><summary>Ganti kata sandi</summary><form method="post">
+              <input type="hidden" name="token" value="{{ csrf_token }}"><input type="hidden" name="action" value="reset_password">
+              <input type="hidden" name="user_id" value="{{ item.id }}">
+              <label>Kata sandi baru untuk {{ item.display_name }}<input name="new_password" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required></label>
+              <button class="secondary">Simpan kata sandi</button>
+            </form></details>
+          {% endif %}</td>
+        </tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    <section class="panel"><h2>Aktivitas akun terbaru</h2>
+      {% set actions = {'CREATE':'Membuat akun','ACTIVATE':'Mengaktifkan akun','DEACTIVATE':'Menonaktifkan akun','RESET_PASSWORD':'Mengganti kata sandi pengguna','CHANGE_PASSWORD':'Mengubah kata sandi sendiri'} %}
+      <ul class="account-history">{% for item in history %}<li><strong>{{ actions[item.action] }}</strong> &middot; {{ item.target_name }}
+        <small>Oleh {{ item.actor_name or 'Inisialisasi sistem' }} &middot; {{ item.created_at }}</small></li>{% else %}<li>Belum ada aktivitas akun.</li>{% endfor %}</ul>
+    </section>
+    {% else %}
+    <section class="panel password-panel"><h2>{{ current_user.display_name }}</h2>
+      <p>{{ current_user.email }} &middot; {{ role_labels[current_user.role] }}</p>
+      <form method="post" class="account-form">
+        <input type="hidden" name="token" value="{{ csrf_token }}">
+        <label>Kata sandi saat ini<input name="current_password" type="password" autocomplete="current-password" maxlength="1024" required></label>
+        <label>Kata sandi baru<input name="new_password" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required></label>
+        <label>Ulangi kata sandi baru<input name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required></label>
+        <p class="login-help">Minimal 12 karakter. Setelah diubah, perangkat lain perlu masuk kembali.</p>
+        <button>Simpan kata sandi</button>
+      </form>
+    </section>
+    {% endif %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,184 @@
+/*
+ * SiBantu — tema "Pusat Kendali" (gelap).
+ * Dimuat paling akhir pada setiap halaman. Token di sini menggantikan nilai terang
+ * pada assessment.css/fieldwork.css tanpa mengubah markup formulir yang sudah diuji.
+ * Lihat design-system/sibantu/MASTER.md.
+ */
+:root {
+  color-scheme: dark;
+  /* Permukaan */
+  --page: #0a1017;
+  --panel: #101922;
+  --panel-2: #142030;
+  --panel-3: #1a2836;
+  --line: #22313f;
+  --line-strong: #31465a;
+  /* Teks (kontras >= 4.5:1 terhadap --panel) */
+  --text: #e6edf3;
+  --muted: #9aabbb;
+  --faint: #6f8294;
+  /* Identitas hijau SiBantu */
+  --accent: #22c55e;
+  --accent-dark: #4ade80;
+  --accent-ink: #04140a;
+  --tint: rgba(34, 197, 94, .12);
+  /* Status semantik */
+  --critical: #f43f5e;
+  --critical-tint: rgba(244, 63, 94, .14);
+  --warning: #f59e0b;
+  --warning-tint: rgba(245, 158, 11, .14);
+  --info: #38bdf8;
+  --info-tint: rgba(56, 189, 248, .13);
+  --violet: #a78bfa;
+  --violet-tint: rgba(167, 139, 250, .14);
+  --focus: #7dd3fc;
+  /* Tipografi: tanpa font eksternal (ADR-025) */
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Inter", system-ui, -apple-system, Roboto, sans-serif;
+  --font-mono: "Cascadia Mono", "Cascadia Code", "JetBrains Mono", Consolas, ui-monospace, monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --ease: cubic-bezier(.2, .7, .3, 1);
+  font: 100%/1.55 var(--font-sans);
+  background: var(--page);
+  color: var(--text);
+}
+
+body { background: var(--page); color: var(--text); min-height: 100vh; }
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(60rem 30rem at 85% -10%, rgba(34, 197, 94, .07), transparent 60%),
+    radial-gradient(50rem 30rem at -10% 110%, rgba(56, 189, 248, .05), transparent 60%);
+}
+::selection { background: rgba(34, 197, 94, .35); }
+a { color: var(--accent-dark); text-underline-offset: 3px; }
+a:hover { color: #86efac; }
+p { color: var(--muted); }
+h1, h2, h3 { color: var(--text); }
+h1 { font-size: clamp(1.6rem, 2.8vw, 2.15rem); font-weight: 650; letter-spacing: -.02em; }
+.fieldwork-heading h1 { font-size: clamp(1.6rem, 2.8vw, 2.15rem); }
+.intro { margin-bottom: 1.25rem; }
+.intro h1 { margin-top: .5rem; }
+main { padding-block: 2rem 4rem; }
+.shell { width: min(88rem, calc(100% - 2.5rem)); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.skip-link { position: absolute; left: 1rem; top: -4rem; z-index: 50; background: var(--accent); color: var(--accent-ink); padding: .6rem 1rem; border-radius: var(--radius-sm); font-weight: 700; }
+.skip-link:focus { top: 1rem; }
+.mono, .eyebrow, time, .case-code { font-family: var(--font-mono); }
+
+/* ---------- Header pusat kendali ---------- */
+.top { background: rgba(10, 16, 23, .92); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; backdrop-filter: blur(10px); }
+.top-inner { padding-block: .9rem; flex-wrap: nowrap; }
+.brand { display: flex; align-items: center; gap: .9rem; padding: 0; color: var(--text); min-width: 0; }
+.brand-mark { display: grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; border-radius: 10px; color: var(--accent); background: var(--tint); border: 1px solid rgba(34, 197, 94, .45); box-shadow: 0 0 0 4px rgba(34, 197, 94, .06); }
+.brand-text { display: grid; min-width: 0; }
+.brand-text small { font: 600 .68rem/1.4 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-text strong { font-size: 1.3rem; font-weight: 650; letter-spacing: -.01em; line-height: 1.25; }
+.brand-text strong span { font-weight: 400; color: var(--muted); font-size: 1rem; margin-left: .35rem; }
+.top-status { display: flex; align-items: center; gap: 1.25rem; flex: none; }
+.clock { display: flex; align-items: center; gap: .45rem; margin: 0; font: 500 .8rem var(--font-mono); color: var(--muted); letter-spacing: .04em; }
+.clock time { color: var(--text); font-variant-numeric: tabular-nums; }
+.account { gap: .75rem; padding-left: 1.25rem; border-left: 1px solid var(--line); }
+.account-link { display: flex; align-items: center; gap: .65rem; color: var(--text); text-decoration: none; font-weight: 600; font-size: .88rem; line-height: 1.3; }
+.account-link:hover { color: var(--text); text-decoration: none; }
+.account-link:hover .avatar { border-color: var(--accent); }
+.account small { color: var(--muted); font-weight: 400; font-size: .75rem; }
+.avatar { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--panel-3); border: 1px solid var(--line-strong); font: 700 .8rem var(--font-mono); color: var(--text); transition: border-color .15s var(--ease); }
+.logout { display: inline-flex; align-items: center; gap: .4rem; min-height: 40px; }
+
+.tabs { border-top: 1px solid var(--line); background: transparent; }
+.tabs-inner { display: flex; gap: .25rem; overflow-x: auto; scrollbar-width: none; }
+.tabs-inner::-webkit-scrollbar { display: none; }
+.tabs a { display: inline-flex; align-items: center; gap: .55rem; white-space: nowrap; padding: .9rem .9rem; color: var(--muted); font-weight: 550; font-size: .92rem; text-decoration: none; border-bottom: 2px solid transparent; transition: color .15s var(--ease), border-color .15s var(--ease); }
+.tabs a:hover { color: var(--text); }
+.tabs a[aria-current] { color: var(--accent-dark); border-color: var(--accent); font-weight: 650; }
+.tabs a svg { flex: none; }
+
+/* ---------- Komponen dasar ---------- */
+.panel, details.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.eyebrow { color: var(--accent-dark); font-size: .72rem; font-weight: 600; letter-spacing: .16em; }
+.badge { background: var(--warning-tint); color: #fcd34d; border: 1px solid rgba(245, 158, 11, .4); font: 700 .7rem/1.6 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.intro .badge { background: var(--warning-tint); color: #fcd34d; }
+button, .button-link { background: var(--accent); color: var(--accent-ink); border-radius: var(--radius-sm); font-weight: 700; transition: background-color .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease); }
+button:hover, .button-link:hover { background: #4ade80; color: var(--accent-ink); }
+button:active, .button-link:active { filter: brightness(.9); }
+.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line-strong); }
+.secondary:hover { background: var(--panel-3); color: var(--text); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+select, input:not([type=checkbox]):not([type=radio]):not([type=hidden]), textarea {
+  background: var(--panel-2) !important; color: var(--text) !important; border: 1px solid var(--line-strong) !important; border-radius: var(--radius-sm) !important;
+}
+select:hover, input:not([type=checkbox]):not([type=radio]):hover, textarea:hover { border-color: #46607a !important; }
+select:disabled { background: var(--page) !important; color: var(--muted) !important; }
+input::placeholder, textarea::placeholder { color: var(--faint); }
+input[type=checkbox], input[type=radio], progress { accent-color: var(--accent); }
+::-webkit-calendar-picker-indicator { filter: invert(.85); }
+summary { color: var(--accent-dark); }
+table { font-size: .88rem; }
+thead { background: var(--panel-2); }
+th { color: var(--text); }
+thead th { font: 600 .72rem var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+th, td { border-bottom-color: var(--line); }
+tbody tr { transition: background-color .12s var(--ease); }
+tbody tr:hover { background: rgba(255, 255, 255, .025); }
+.alert { background: var(--critical-tint); border: 1px solid rgba(244, 63, 94, .45); color: #fecdd3; }
+.notice { background: var(--tint); border: 1px solid rgba(34, 197, 94, .4); color: #bbf7d0; }
+.simulation-note { background: var(--warning-tint); border: 1px solid rgba(245, 158, 11, .4); color: #fde68a; }
+.simulation-note strong { color: #fcd34d; font-family: var(--font-mono); letter-spacing: .08em; }
+.role-status { background: var(--panel-2); border-color: var(--line); }
+.roles a { color: var(--text); border-color: var(--line); background: var(--panel-2); }
+.roles a:hover, .roles a[aria-current] { background: var(--tint); border-color: var(--accent); }
+.roles .complete { color: var(--accent-dark); }
+.cr { color: var(--text); font-family: var(--font-mono); }
+
+/* Chip status pendataan (selalu berteks, tidak bergantung warna saja) */
+.status-chip, .report-status { display: inline-flex; align-items: center; gap: .4rem; border-radius: 6px; padding: .2rem .55rem; font: 600 .72rem/1.6 var(--font-mono); letter-spacing: .04em; border: 1px solid transparent; white-space: nowrap; }
+.status-chip::before, .report-status::before { content: ""; width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; flex: none; }
+.status-chip.unregistered, .report-status { background: rgba(148, 163, 184, .1); color: #cbd5e1; border-color: rgba(148, 163, 184, .25); }
+.status-chip.pending { background: var(--violet-tint); color: #c4b5fd; border-color: rgba(167, 139, 250, .4); }
+.status-chip.assigned, .status-chip.draft, .report-status.draft { background: var(--info-tint); color: #7dd3fc; border-color: rgba(56, 189, 248, .4); }
+.status-chip.submitted, .report-status.submitted { background: var(--warning-tint); color: #fcd34d; border-color: rgba(245, 158, 11, .4); }
+.status-chip.rejected, .report-status.rejected { background: var(--critical-tint); color: #fda4af; border-color: rgba(244, 63, 94, .45); }
+.status-chip.verified, .report-status.verified { background: var(--tint); color: #86efac; border-color: rgba(34, 197, 94, .4); }
+
+/* ---------- Pendataan (fieldwork.css) ---------- */
+.fieldwork-page { --field-surface: var(--panel); --field-bg: var(--page); --field-border: var(--line); --field-muted: var(--muted); --field-ink: var(--text); --field-green: var(--accent-dark); --field-error: #fb7185; background: var(--page); }
+.fieldwork-page .shell { max-width: 88rem; }
+.task-stats > div, .task-card, .report-form-panel, .report-summary, .report-history { background: var(--panel); border-color: var(--line); }
+.task-stats > div { position: relative; overflow: hidden; }
+.task-stats > div::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); opacity: .7; }
+.task-stats strong, .report-summary dd { font-family: var(--font-mono); }
+.task-card { transition: border-color .15s var(--ease), transform .15s var(--ease); }
+.task-card:hover { border-color: var(--line-strong); }
+.task-empty { background: var(--panel); border-color: var(--line-strong); }
+.history-note { background: var(--panel-2); }
+.report-info { background: var(--info-tint); border-color: rgba(56, 189, 248, .35); color: #bae6fd; }
+.report-error-summary { background: var(--critical-tint); border-color: rgba(244, 63, 94, .45); }
+.fieldwork-page :is(input, select, textarea, button, a):focus-visible { outline-color: var(--focus); }
+
+/* ---------- Penilaian AHP (ahp-form.css) ---------- */
+.ahp-form .ahp-choice { border-color: var(--line-strong); background: var(--panel-2); }
+.ahp-choice:hover { background: var(--panel-3); }
+.ahp-choice:has(input:checked) { background: var(--tint); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.ahp-answer { background: var(--panel-2); color: var(--text); }
+.ahp-error { color: #fda4af; }
+.ahp-review-list p { color: var(--text); }
+.ahp-position { color: var(--accent-dark); }
+
+@media (max-width: 64rem) {
+  .brand-text strong span, .clock { display: none; }
+}
+@media (max-width: 40rem) {
+  .shell { width: calc(100% - 2rem); }
+  .top-inner { gap: .75rem; }
+  .brand-mark { width: 2.4rem; height: 2.4rem; }
+  .brand-text small { display: none; }
+  .brand-text strong { font-size: 1.1rem; }
+  .account { padding-left: 0; border-left: 0; width: auto; padding-bottom: 0; }
+  .account-link > span:last-child, .logout span { display: none; }
+  .tabs a { padding: .75rem .65rem; font-size: .85rem; }
+  select, input:not([type=checkbox]):not([type=radio]), textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}

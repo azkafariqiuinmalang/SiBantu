@@ -5,40 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pendataan | SiBantu</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='assessment.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='fieldwork.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+  <script src="{{ url_for('static', filename='fieldwork.js') }}" defer></script>
 </head>
-<body>
-  <header class="top"><div class="shell top-inner">
-    <a class="brand" href="{{ url_for('fieldwork_home') }}">SiBantu</a>
-    <nav aria-label="Navigasi utama">
-      <a href="{{ url_for('fieldwork_home') }}" aria-current="page">Pendataan</a>
-      <a href="{{ url_for('index') }}">Penilaian</a>
-      <a href="{{ url_for('group_results') }}">Hasil kelompok</a>
-    </nav>
-  </div></header>
+<body class="fieldwork-page">
+  {% include '_navigation.html' %}
   {% macro hidden_token() %}
     <input type="hidden" name="token" value="{{ token }}">
   {% endmacro %}
   {% macro simulation(record) %}
     {% if record.is_simulation %}<span class="badge">Simulasi</span>{% endif %}
   {% endmacro %}
-  {% macro field(key, label, form={}, hint='', kind='text', min_value=none, max_value=none, step=none) %}
-    <label>{{ label }}
-      <input name="{{ key }}" type="{{ kind }}" value="{{ form.get(key) if form.get(key) is not none else '' }}"
+  {% macro field(key, label, form={}, hint='', kind='text', min_value=none, max_value=none, step=none, placeholder='', maxlength=none, required=false) %}
+    <label for="{{ key }}">{{ label }}
+      <input id="{{ key }}" name="{{ key }}" type="{{ kind }}" value="{{ form.get(key) if form.get(key) is not none else '' }}"
+             {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+             {% if maxlength is not none %}maxlength="{{ maxlength }}"{% endif %}
+             {% if required %}required{% endif %}
+             {% if hint %}aria-describedby="{{ key }}-help"{% endif %}
              {% if min_value is not none %}min="{{ min_value }}"{% endif %}
              {% if max_value is not none %}max="{{ max_value }}"{% endif %}
              {% if step is not none %}step="{{ step }}"{% endif %}>
-      {% if hint %}<small>{{ hint }}</small>{% endif %}
+      {% if hint %}<small id="{{ key }}-help">{{ hint }}</small>{% endif %}
     </label>
   {% endmacro %}
   {% macro case_form(form={}) %}
     <form method="post" action="{{ url_for('fieldwork_new_case') }}">
       {{ hidden_token() }}
       <div class="field-grid">
-        {{ field('case_code', 'Kode kejadian', form) }}
-        {{ field('name', 'Nama kejadian', form) }}
-        {{ field('province', 'Provinsi', form) }}
-        {{ field('regency', 'Kabupaten/kota', form) }}
-        {{ field('incident_at', 'Waktu kejadian', form, 'Contoh 2026-05-01T08:00+07:00') }}
+        {{ field('case_code', 'Kode kejadian', form,
+                 'Kode pencatatan internal. Contoh GB-001: GB berarti gempa bumi, 001 nomor urut. Gunakan kode berbeda untuk setiap kejadian.',
+                 placeholder='Contoh: GB-001', maxlength=40, required=true) }}
+        {{ field('name', 'Nama kejadian', form, placeholder='Contoh: Gempa Malang Raya') }}
+        <input type="hidden" name="province" value="Jawa Timur">
+        <label>Kabupaten/kota
+          <select name="regency">{% for area in ['Malang Raya', 'Kabupaten Malang', 'Kota Malang', 'Kota Batu'] %}
+            <option {% if form.get('regency') == area %}selected{% endif %}>{{ area }}</option>
+          {% endfor %}</select>
+        </label>
+        <label for="incident_at">Waktu kejadian (WIB)
+          <input id="incident_at" name="incident_at" type="datetime-local" lang="id-ID"
+                 value="{{ form.get('incident_at', '') | datetime_input_wib }}"
+                 max="{{ incident_time_max }}" step="60" required aria-describedby="incident_at-help">
+          <small id="incident_at-help">Pilih tanggal dan jam melalui ikon kalender. Jika diketik, ikuti format tanggal yang tampil pada kolom. Waktu menggunakan WIB.</small>
+        </label>
         {{ field('magnitude', 'Magnitudo (opsional)', form, kind='number', step='any') }}
         {{ field('information_source', 'Sumber informasi', form) }}
         <label class="check"><input type="checkbox" name="is_simulation" value="1"
@@ -48,57 +60,71 @@
     </form>
   {% endmacro %}
   {% set labels = {'DRAFT': 'Draf', 'SUBMITTED': 'Menunggu verifikasi', 'REJECTED': 'Ditolak', 'VERIFIED': 'Terverifikasi'} %}
-  <main class="shell">
-    <div class="intro">
-      <span class="badge">Demo lokal</span>
+  <main class="shell" id="konten">
+    <div class="intro fieldwork-heading">
+      {% if section == 'assignment' %}
+      <nav class="field-breadcrumb" aria-label="Jejak halaman"><a href="{{ url_for('fieldwork_home') }}">Tugas saya</a><span aria-hidden="true">/</span><span>{{ task.district_name }}</span></nav>
+      <p class="eyebrow">Laporan kecamatan</p><h1>{{ task.district_name }}</h1>
+      <p>{{ task.case_name }} <span class="case-code">{{ task.case_code }}</span> {{ simulation(task) }}</p>
+      {% elif section == 'home' and actor == 'lapangan' %}
+      <p class="eyebrow">Ruang kerja Koordinator Lapangan</p><h1>Pendataan lapangan</h1>
+      <p>Isi dan pantau laporan kecamatan yang ditugaskan kepada Anda.</p>
+      {% else %}
       <h1>{{ {'home': 'Pendataan lapangan', 'new_case': 'Daftarkan kejadian',
               'case': case.name if case is defined else '', 'assignment': task.district_name if task is defined else '',
               'review': 'Verifikasi laporan'}[section] }}</h1>
       {% if actor %}<p>{{ actors[actor] }} · <a href="{{ url_for('fieldwork_home') }}">Halaman pendataan</a></p>{% endif %}
+      {% endif %}
     </div>
-    {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+    {% for notice in get_flashed_messages() %}<p class="notice" role="status">{{ notice }}</p>{% endfor %}
+    {% if error and section != 'assignment' %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
 
     {% if section == 'home' %}
-    <section class="panel">
-      <h2>Peran demo</h2>
-      <form class="role-picker" method="post" action="{{ url_for('fieldwork_actor') }}">
-        {{ hidden_token() }}
-        <select name="actor" aria-label="Pilih peran demo">{% for key, name in actors.items() %}
-          <option value="{{ key }}" {% if actor == key %}selected{% endif %}>{{ name }}</option>
-        {% endfor %}</select>
-        <button>Gunakan peran</button>
-      </form>
-    </section>
-    {% if actor == 'admin' %}
+    {% if actor == 'bpbd' %}
       <section class="panel"><h2>Daftarkan kejadian</h2>{{ case_form() }}</section>
+    {% endif %}
+    {% if actor != 'lapangan' %}
       <section class="panel"><h2>Daftar kejadian</h2>
         <ul>{% for item in cases %}<li><a href="{{ url_for('fieldwork_case', case_id=item.id) }}">{{ item.name }}</a>
             · {{ item.case_code }} {{ simulation(item) }}</li>
         {% else %}<li>Belum ada kejadian.</li>{% endfor %}</ul>
       </section>
-    {% elif actor %}
-      <section class="panel"><h2>Tugas saya</h2>
-        <ul>{% for task in assignments %}<li><a href="{{ url_for('fieldwork_assignment', assignment_id=task.id) }}">{{ task.district_name }}</a>
-            · {{ task.case_name }} {{ simulation(task) }}</li>
-        {% else %}<li>Belum ada tugas.</li>{% endfor %}</ul>
-      </section>
+    {% endif %}
+    {% if actor == 'lapangan' %}
+      {% include '_coordinator_home.html' %}
     {% endif %}
     {% elif section == 'new_case' %}
       <section class="panel">{{ case_form(form) }}</section>
     {% elif section == 'case' %}
       <section class="panel">
         <h2>Informasi kejadian</h2>
-        <p>{{ case.case_code }} · {{ case.regency }}, {{ case.province }} · {{ case.incident_at }} {{ simulation(case) }}</p>
+        <p>{{ case.case_code }} · {{ case.regency }}, {{ case.province }} · {{ case.incident_at | datetime_display_wib }} {{ simulation(case) }}</p>
         <p>Sumber {{ case.information_source }}{% if case.magnitude is not none %} · Magnitudo {{ case.magnitude }}{% endif %}</p>
         <p><strong>{{ verified }} dari {{ districts | length }} kecamatan terverifikasi</strong></p>
+        {% if case.is_simulation %}<p class="simulation-note">SIMULASI: angka dan proses verifikasi contoh digunakan untuk latihan, bukan laporan kejadian nyata.</p>{% endif %}
+        {% if decision_round and decision_round.algorithm_version == current_criteria_version %}
+          <p>Ronde {{ decision_round.id }} sudah tersedia untuk ketiga pengambil keputusan.</p>
+          <a class="button-link" href="{{ url_for('assessment',role=current_user.role,round_id=decision_round.id) }}">Buka penilaian saya</a>
+        {% endif %}
+        {% if actor == 'bpbd' and districts|length >= 2 and verified == districts|length and (not decision_round or decision_round.finalized_at or decision_round.algorithm_version != current_criteria_version) %}
+          <form class="actions" method="post">{{ hidden_token() }}
+            <button name="action" value="open_round">{{ 'Buka ronde penilaian baru' if decision_round else 'Buka penilaian ketiga aktor' }}</button>
+          </form>
+        {% endif %}
       </section>
       <section class="panel">
         <h2>Kecamatan dan penugasan</h2>
+        {% if actor in ['bpbd', 'lapangan'] %}
         <form method="post">
           {{ hidden_token() }}
-          <div class="field-grid">{{ field('district_code', 'Kode kecamatan', form) }}{{ field('district_name', 'Nama kecamatan', form) }}</div>
-          <div class="actions"><button name="action" value="district">Tambah kecamatan</button></div>
+          <label>Pilih kecamatan
+            <select name="district_code">{% for item in catalog if case.regency not in ['Kabupaten Malang', 'Kota Malang', 'Kota Batu'] or item.regency == case.regency %}
+              <option value="{{ item.code }}">{{ item.name }} · {{ item.regency }}</option>
+            {% endfor %}</select>
+          </label>
+          <div class="actions"><button name="action" value="district">{{ 'Tambah kecamatan' if actor == 'bpbd' else 'Usulkan dan mulai pendataan' }}</button></div>
         </form>
+        {% endif %}
         {% for district in districts %}
           <div class="district-row">
             <strong>{{ district.district_code }} · {{ district.district_name }}</strong>
@@ -107,14 +133,20 @@
                 {{ actors[assignment.officer_id] }}{% if not loop.last %}, {% endif %}
               {% else %}belum ditugaskan{% endfor %}
             </p>
+            {% if district.verification_status == 'PENDING' %}
+              <p>Usulan kecamatan menunggu persetujuan Kepala BPBD.</p>
+              {% if actor == 'bpbd' %}<form method="post">
+                {{ hidden_token() }}<input type="hidden" name="district_id" value="{{ district.id }}">
+                <button name="action" value="approve_district">Setujui kecamatan</button>
+              </form>{% endif %}
+            {% endif %}
+            {% if actor == 'bpbd' %}
             <form class="role-picker" method="post">
               {{ hidden_token() }}
               <input type="hidden" name="district_id" value="{{ district.id }}">
-              <select name="officer_id" aria-label="Pilih petugas untuk {{ district.district_name }}">
-                {% for key, name in actors.items() if key != 'admin' %}<option value="{{ key }}">{{ name }}</option>{% endfor %}
-              </select>
-              <button name="action" value="assign">Tugaskan</button>
+              <button name="action" value="assign">Tugaskan Koordinator Lapangan</button>
             </form>
+            {% endif %}
           </div>
         {% endfor %}
       </section>
@@ -128,32 +160,7 @@
         {% else %}<p>Tambahkan kecamatan untuk memulai pendataan.</p>{% endfor %}
       </section>
     {% elif section == 'assignment' %}
-      <section class="panel">
-        <h2>Laporan lapangan</h2><p>{{ task.case_name }} {{ simulation(task) }}</p>
-        {% if editable %}
-          <p>Gunakan periode yang sama untuk stok dan kebutuhan. Catat jumlah secara agregat per kecamatan.</p>
-          <form method="post">
-            {{ hidden_token() }}
-            <input type="hidden" name="stamp" value="{{ stamp }}">
-            <div class="field-grid">
-              {{ field('observed_at', 'Waktu observasi', form, 'Contoh 2026-05-01T08:00+07:00') }}
-              {{ field('source_note', 'Sumber observasi', form) }}
-              {% for key, label, cast, low, high in fields %}
-                {{ field(key, label, form, kind='number', min_value=low, max_value=high,
-                         step=1 if key in ['evacuees', 'vulnerable_people', 'housing_damage_score',
-                                           'essential_services_disruption_score'] else 'any') }}
-              {% endfor %}
-            </div>
-            <div class="actions"><button class="secondary" name="action" value="draft">Simpan draf</button>
-              <button name="action" value="submit">Kirim untuk verifikasi</button></div>
-          </form>
-        {% else %}<p>Form terbuka kembali setelah laporan aktif selesai diperiksa.</p>{% endif %}
-      </section>
-      <section class="panel"><h2>Riwayat laporan saya</h2>
-        <ul>{% for report in reports %}
-          <li>Versi {{ report.version }} · {{ labels[report.status] }}{% if report.note %} · {{ report.note }}{% endif %}</li>
-        {% else %}<li>Belum ada laporan.</li>{% endfor %}</ul>
-      </section>
+      {% include '_field_report_form.html' %}
     {% elif section == 'review' %}
       <section class="panel">
         <h2>{{ report.district_name }} · Versi {{ report.version }}</h2>
@@ -169,7 +176,7 @@
           {% endif %}
         </tbody></table></div>
         {% if report.note %}<p>Catatan verifikasi · {{ report.note }}</p>{% endif %}
-        {% if report.status == 'SUBMITTED' %}
+        {% if report.status == 'SUBMITTED' and actor == 'bpbd' %}
           <form method="post">
             {{ hidden_token() }}
             <label class="review-note">Catatan verifikasi (wajib jika ditolak)

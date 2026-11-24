@@ -3,22 +3,18 @@
 import json
 import os
 import secrets
-import sqlite3
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import Flask, abort, redirect, render_template, request, session, url_for
 
-from decision_engine import CRITERIA, PAIRS, SCALE, VERSION, ahp, borda, demo_snapshot, topsis
+from decision_engine import CRITERIA, PAIRS, SCALE, VERSION, SUPPORTED_VERSIONS, criteria_for_version, ahp, borda, demo_snapshot, topsis
 from fieldwork import register_fieldwork
+from auth import ROLES, register_auth, require_role
+from database import PostgresConnection, load_environment, migrate, sqlite_connection
 
 ROOT = Path(__file__).resolve().parent
-ROLES = {
-    "bpbd": "Kepala BPBD",
-    "lapangan": "Koordinator Tim Lapangan",
-    "sosial": "Perwakilan Dinas Sosial",
-}
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS assessment_round (
     id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -43,49 +39,62 @@ def now():
 
 
 def create_app(database=None):
+    load_environment(ROOT)
     app = Flask(__name__, instance_path=str(ROOT / "instance"))
-    app.secret_key = secrets.token_hex(32)
+    secret_path = ROOT / "instance" / "session.key"
+    secret_path.parent.mkdir(parents=True, exist_ok=True)
+    if not secret_path.exists():
+        try:
+            with secret_path.open("x", encoding="utf-8") as file:
+                file.write(secrets.token_hex(32))
+        except FileExistsError:
+            pass
+    app.secret_key = os.environ.get("SECRET_KEY") or secret_path.read_text(encoding="utf-8").strip()
     app.config["MAX_CONTENT_LENGTH"] = 16_384
+    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("COOKIE_SECURE") == "1"
+    supabase_url = "" if database is not None else os.environ.get("SUPABASE_DB_URL", "").strip()
+    if supabase_url and not supabase_url.startswith(("postgresql://", "postgres://")):
+        raise RuntimeError("SUPABASE_DB_URL harus berupa URI PostgreSQL dari panel Connect Supabase.")
     db_path = Path(database or os.environ.get("GDSS_DB_PATH") or ROOT / "instance" / "assessment.sqlite3")
     app.config["DATABASE"] = db_path
+    app.config["DATABASE_BACKEND"] = "supabase" if supabase_url else "sqlite"
 
     def connect():
-        connection = sqlite3.connect(db_path)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        return closing(connection)
+        return closing(PostgresConnection(supabase_url) if supabase_url else sqlite_connection(db_path))
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with connect() as db, db:
-        db.execute("BEGIN IMMEDIATE")
-        version = db.execute("PRAGMA user_version").fetchone()[0]
-        if version > 2:
-            raise RuntimeError("Versi database lebih baru dari aplikasi.")
-        if version == 0:
-            for statement in SCHEMA.split(";"):
-                if statement.strip():
-                    db.execute(statement)
-        if version < 2:
-            migration = (ROOT / "migrations" / "002_fieldwork.sql").read_text(encoding="utf-8")
-            for statement in migration.split(";"):
-                if statement.strip():
-                    db.execute(statement)
-            db.execute("PRAGMA user_version = 2")
+        migrate(db, ROOT, SCHEMA)
         existing = db.execute("SELECT algorithm_version FROM assessment_round WHERE id = 1").fetchone()
         if existing is None:
             seed = json.loads((ROOT / "examples" / "seed_case.json").read_text(encoding="utf-8"))
             if seed.get("is_simulation") is not True:
                 raise ValueError("Demo lokal memerlukan seed berlabel SIMULASI.")
             db.execute(
-                "INSERT OR IGNORE INTO assessment_round VALUES (1, ?, ?, ?, NULL, NULL)",
+                "INSERT INTO assessment_round VALUES (1, ?, ?, ?, NULL, NULL) ON CONFLICT(id) DO NOTHING",
                 (json.dumps(demo_snapshot(seed)), now(), VERSION),
             )
-        elif existing["algorithm_version"] != VERSION:
+        elif existing["algorithm_version"] not in SUPPORTED_VERSIONS:
             raise RuntimeError("Versi mesin berbeda dari versi ronde yang tersimpan.")
+        if db.execute("SELECT id FROM decision_rounds LIMIT 1").fetchone() is None:
+            db.execute("""INSERT INTO decision_rounds(case_id,snapshot,locked_at,algorithm_version,group_result,finalized_at)
+                       SELECT NULL,snapshot,locked_at,algorithm_version,group_result,finalized_at FROM assessment_round""")
 
     def round_state(db):
-        record = db.execute("SELECT * FROM assessment_round WHERE id = 1").fetchone()
-        assessments = {row["role"]: row for row in db.execute("SELECT * FROM assessment")}
+        raw = request.args.get("round_id")
+        if raw is None and request.method == "POST":
+            raw = request.form.get("round_id")
+        if raw is None:
+            record = db.execute("SELECT * FROM decision_rounds ORDER BY id DESC LIMIT 1").fetchone()
+        else:
+            try:
+                selected = int(raw)
+            except ValueError:
+                abort(400)
+            record = db.execute("SELECT * FROM decision_rounds WHERE id=?",(selected,)).fetchone()
+        if record is None:
+            abort(404)
+        assessments = {row["role"]: row for row in db.execute("SELECT * FROM round_assessments WHERE round_id=?",(record["id"],))}
         return record, assessments
 
     def show(role=None, choices=None, preview=None, message=None, status=200,
@@ -93,6 +102,8 @@ def create_app(database=None):
         with connect() as db, db:
             db.execute("BEGIN")
             record, assessments = round_state(db)
+            rounds = [dict(id=row["id"],name=json.loads(row["snapshot"])["name"]) for row in
+                      db.execute("SELECT id,snapshot FROM decision_rounds ORDER BY id DESC")]
         snapshot = json.loads(record["snapshot"])
         active = assessments.get(role)
         if choices is None or (active and active["submitted_at"]):
@@ -106,10 +117,11 @@ def create_app(database=None):
         token = session.setdefault("form_token", secrets.token_urlsafe(24))
         return render_template(
             "assessment.html", roles=ROLES, role=role, active=active, assessments=assessments,
-            choices=choices, criteria=CRITERIA, pairs=PAIRS, scale=SCALE, record=record,
+            choices=choices, criteria=snapshot.get("criteria",criteria_for_version(record["algorithm_version"])), pairs=PAIRS, scale=SCALE, record=record,
             snapshot=snapshot, preview=preview, results=results, message=message, token=token,
             group=json.loads(record["group_result"]) if record["group_result"] else [],
-            section=section, form_revision=form_revision,
+            section=section, form_revision=form_revision, rounds=rounds, selected_round_id=record["id"],
+            is_legacy=record["algorithm_version"] != VERSION,
         ), status
 
     def check_form():
@@ -117,20 +129,55 @@ def create_app(database=None):
         if not token or not secrets.compare_digest(token.encode(), request.form.get("token", "").encode()):
             abort(400, "Muat ulang halaman dan coba lagi.")
 
+    register_auth(app, connect, check_form)
+    from accounts import register_accounts
+    register_accounts(app, connect, check_form)
     register_fieldwork(app, connect, check_form)
+    from dashboard import register_dashboard
+    register_dashboard(app, connect)
+    from simulation import register_simulation
+    register_simulation(app,connect)
+
+    @app.errorhandler(400)
+    @app.errorhandler(403)
+    @app.errorhandler(404)
+    @app.errorhandler(409)
+    @app.errorhandler(413)
+    @app.errorhandler(500)
+    def error_page(error):
+        messages = {
+            400: ("Permintaan belum sesuai", "Muat ulang halaman, kemudian coba kembali."),
+            403: ("Akses dibatasi", "Halaman atau tindakan ini belum tersedia untuk peran Anda."),
+            404: ("Halaman tidak ditemukan", "Periksa kembali tautan atau pilih menu yang tersedia."),
+            409: ("Data telah berubah", "Muat ulang halaman untuk melihat status terbaru."),
+            413: ("Data terlalu besar", "Kurangi isi formulir lalu kirim kembali."),
+            500: ("Halaman belum dapat dimuat", "Terjadi kendala pada server. Coba kembali beberapa saat lagi."),
+        }
+        title, message = messages[error.code]
+        if error.code != 500 and error.description != type(error).description:
+            message = error.description
+        return render_template("error.html", title=title, message=message), error.code
 
     @app.get("/")
     def index():
-        return redirect(url_for("assessment", role="bpbd"))
+        return redirect(url_for("dashboard"))
 
     @app.route("/penilaian/<role>", methods=["GET", "POST"])
     def assessment(role):
         if role not in ROLES:
             abort(404)
+        require_role(role)
         if request.method == "GET":
             return show(role)
 
+        require_role(role)
         check_form()
+        with connect() as db:
+            selected_record,_ = round_state(db)
+        if selected_record["algorithm_version"] != VERSION:
+            return show(role,message="Ronde ini merupakan arsip dengan C6 lama. Gunakan ronde terbaru dengan jarak C6 dalam kilometer.",status=409)
+        if request.form.get("round_id") != str(selected_record["id"]):
+            return show(role,message="Muat ulang halaman agar penilaian terhubung ke ronde yang dipilih.",status=409)
         action = request.form.get("action")
         if action not in {"draft", "preview", "submit"}:
             abort(400)
@@ -171,19 +218,19 @@ def create_app(database=None):
                 result = dict(ahp=preview, topsis=topsis(districts, preview["weights"]))
                 submitted_at = now()
             db.execute(
-                """INSERT INTO assessment VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(role) DO UPDATE SET choices=excluded.choices,
+                """INSERT INTO round_assessments(round_id,role,choices,revision,submitted_at,result) VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(round_id,role) DO UPDATE SET choices=excluded.choices,
                 revision=excluded.revision, submitted_at=excluded.submitted_at, result=excluded.result""",
-                (role, json.dumps(choices), revision + 1, submitted_at,
+                (record["id"], role, json.dumps(choices), revision + 1, submitted_at,
                  json.dumps(result) if result else None),
             )
             if result and all(key == role or (key in assessments and assessments[key]["submitted_at"])
                               for key in ROLES):
                 all_results = [result if key == role else json.loads(assessments[key]["result"]) for key in ROLES]
                 rankings = [[row["code"] for row in item["topsis"]["rows"]] for item in all_results]
-                db.execute("UPDATE assessment_round SET group_result = ? WHERE id = 1",
-                           (json.dumps(borda(districts, rankings)),))
-        return redirect(url_for("assessment", role=role), code=303)
+                db.execute("UPDATE decision_rounds SET group_result = ? WHERE id = ?",
+                           (json.dumps(borda(districts, rankings)),record["id"]))
+        return redirect(url_for("assessment", role=role,round_id=record["id"]), code=303)
 
     @app.get("/hasil")
     def group_results():
@@ -191,15 +238,20 @@ def create_app(database=None):
 
     @app.post("/penilaian/bpbd/finalisasi")
     def finalize():
+        require_role("bpbd")
         check_form()
         with connect() as db, db:
             db.execute("BEGIN IMMEDIATE")
             record, _ = round_state(db)
+            if record["algorithm_version"] != VERSION:
+                abort(409,"Ronde ini merupakan arsip baca-saja dengan definisi kriteria sebelumnya.")
+            if request.form.get("round_id") != str(record["id"]):
+                abort(409,"Muat ulang halaman sebelum mengesahkan ronde ini.")
             if not record["group_result"]:
                 return show(section="results", message="Tunggu ketiga penilaian dikirim.", status=409)
             if not record["finalized_at"]:
-                db.execute("UPDATE assessment_round SET finalized_at = ? WHERE id = 1", (now(),))
-        return redirect(url_for("group_results"), code=303)
+                db.execute("UPDATE decision_rounds SET finalized_at = ? WHERE id = ?", (now(),record["id"]))
+        return redirect(url_for("group_results",round_id=record["id"]), code=303)
 
     return app
 

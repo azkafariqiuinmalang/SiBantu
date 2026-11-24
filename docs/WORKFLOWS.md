@@ -1,5 +1,13 @@
 # Workflows, Use Cases, Status
 
+## Simulasi empat kecamatan dan ronde per kejadian (21 November 2026)
+
+Kasus GB-SIM-MLG-001 sudah berisi empat laporan fiktif terverifikasi dan ronde 2. Penyiapan contoh memakai actor_id sistem simulation dan catatan verifikasi otomatis, sehingga tidak mengatasnamakan pemeriksaan lapangan nyata. Tidak ada penilaian DM yang disiapkan otomatis.
+
+Ketiga aktor masuk dengan akunnya sendiri, memilih ronde yang sama lalu mengirim penilaian independen. Progres 0/3 sampai 3/3 tampil di dashboard. Hasil kelompok dan mode warna prioritas tersedia setelah tiga kiriman valid. Peta mode status memakai laporan terbaru; mode prioritas memakai snapshot ronde. Keduanya diberi keterangan berbeda.
+
+Kepala BPBD mengesahkan ronde. Jika Koordinator memperbarui laporan, hasil ronde sebelumnya tidak berubah. Sesudah versi laporan terbaru disetujui, Kepala BPBD dapat membuka ronde baru dengan snapshot baru dan penilaian aktor yang kembali kosong. Pemilih ronde mempertahankan akses ke hasil sebelumnya.
+
 ## Workflow utama
 ```mermaid
 flowchart TD
@@ -33,7 +41,7 @@ flowchart TD
 
 ### Petugas lapangan
 - Lihat tugas per kecamatan.
-- Catat `observed_at`, `source_note`, jumlah pengungsi, jumlah rentan, kerusakan, gangguan layanan dasar, stok vs kebutuhan, jam sejak bantuan terakhir.
+- Catat observed_at melalui kalender/jam WIB, source_note, jumlah pengungsi/rentan, kerusakan, gangguan layanan, stok/kebutuhan dan distance_to_epicenter_km untuk C6. Draf boleh parsial; laporan baru memakai criteria_version 2.0. Laporan lama tetap disimpan, bukan dikonversi satuannya.
 - Simpan draft → kirim untuk verifikasi. Laporan ditolak → perbaiki → ajukan ulang.
 - Usulkan kecamatan baru jika terdampak tetapi belum ada daftar; hanya admin yang menyetujui.
 

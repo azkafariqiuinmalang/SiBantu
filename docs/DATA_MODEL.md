@@ -1,6 +1,16 @@
 # Data Model (Relational, konseptual)
 
+## Pembaruan versi 6
+
+field_reports.criteria_version menandai 1.0 (C6 jam, arsip) atau 2.0 (C6 distance_to_epicenter_km, benefit). Default migrasi 1.0 menjaga arti data lama. Semua penulisan laporan baru menyebut 2.0 secara eksplisit. Snapshot/hasil lama tidak dimutasi; pembaruan menambah versi laporan dan ronde. Jarak hanya diisi pengguna atau sebagai angka fiktif pada kasus SIMULASI, tidak dihitung dari jam lama.
+
 Tidak mengunci vendor database. Gunakan migrations, foreign keys, unique constraints, timestamps UTC pada storage. Lokalisasi tanggal di UI (WIB/WITA/WIT jika relevan). Hindari menyimpan PII pengungsi; gunakan agregat kecamatan.
+
+## Implementasi ronde versi 5, 21 November 2026
+
+`decision_rounds` menyimpan id, case_id (nullable untuk arsip simulasi lama), snapshot JSON, locked_at, algorithm_version, group_result dan finalized_at. `round_assessments` mempunyai primary key gabungan (round_id,role), choices, revision, submitted_at, result. Snapshot mencakup nilai enam kriteria, ID/versi laporan dan observasi sumber. Indeks case_id dan primary key gabungan mendukung pemilihan ronde/progres.
+
+Migrasi 005 menyalin assessment_round/assessment lama ke tabel baru. Tabel dan isinya yang lama tetap disimpan. ID ronde baru dihasilkan database. Ronde aktif terbaru menjadi default; parameter round_id dan identitas form mencegah pengiriman ke ronde yang salah. Ronde baru hanya dibuka Kepala BPBD dari minimal dua kecamatan yang seluruh laporan terbarunya disetujui.
 
 ## Entitas
 | Tabel | Kolom inti | Constraint |
@@ -29,7 +39,7 @@ Tidak mengunci vendor database. Gunakan migrations, foreign keys, unique constra
 On creation of round: transactionally copy a consistent verified version per district into `round_values`, assign all 6 criterion values, validate no missing. `round_values`/`round_alternatives` become immutable after LOCKED. Never point computation at mutable latest field_report directly. Store `snapshot_report_id` for lineage.
 
 ## Data derivation
-C1=`evacuees`; C2=`housing_damage_score`; C3 = `vulnerable_people/evacuees*100` with zero rule; C4=`essential_services_disruption_score`; C5 = `min(100, available_package_equivalents/required_package_equivalents*100)` (same period); C6=`hours_since_last_delivery` (if never served, derive using `baseline_at` and document).
+C1=`evacuees`; C2=`housing_damage_score`; C3 = `vulnerable_people/evacuees*100` with zero rule; C4=`essential_services_disruption_score`; C5 = `min(100, available_package_equivalents/required_package_equivalents*100)` (same period); C6=`distance_to_epicenter_km` (>=0, finite, benefit). Nilai hours_since_last_delivery hanya untuk arsip versi 1.0.
 
 ## Rubric placeholder (must be agreed before real use)
 C2 1=minimal affected, 2=light, 3=moderate, 4=heavy, 5=severe/widespread loss of shelter; C4 1=almost normal, 2=minor disruption, 3=partial major disruption, 4=widespread severe disruption, 5=critical/basic services nonfunctional. These are **demo conventions**, not BNPB-defined official rubrics.

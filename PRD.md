@@ -12,14 +12,16 @@ Prototipe GDSS web yang merekam kejadian gempa, menghimpun dan memverifikasi kon
 ## Persona / peran
 Lihat `PROJECT_CONTEXT.md`, `docs/WORKFLOWS.md`.
 
+**Pembaruan 20 November 2026:** tiga peran login menggantikan lima aktor awal. Kepala BPBD merangkap admin, Koordinator Lapangan merangkap pendataan, Perwakilan Dinas Sosial membaca kebutuhan dan ikut penilaian. Lingkup tahap ini adalah login, pembatasan akses, koneksi database Supabase, dan peta kecamatan Malang Raya. Perubahan metode perhitungan ditunda. Istilah admin/petugas pada rancangan workflow lama merujuk pada tugas BPBD/Koordinator, bukan peran login tambahan.
+
 ## Fitur MVP (wajib)
 | ID | Fitur | Acceptance criteria |
 |---|---|---|
-| F01 | Login & RBAC 5 akun demo | Endpoint dan UI menolak akses tanpa peran yang tepat; password hash |
+| F01 | Login & RBAC tiga aktor | Login sebelum halaman internal; sesi Flask, password hash, CSRF, pembatasan percobaan login; server menolak akses di luar peran |
 | F02 | Daftarkan kejadian gempa | Admin mencatat judul, lokasi, waktu, sumber informasi, label simulasi/riil; tidak memicu otomatisasi bencana |
-| F03 | Alternatif kecamatan | Admin menambah/mengedit kecamatan sebelum lock; ada keterkaitan unik per kasus |
+| F03 | Alternatif kecamatan Malang Raya | Kepala BPBD menambahkan kecamatan dari katalog; koordinator dapat mengusulkan dan menunggu persetujuan; unik per kasus |
 | F04 | Penugasan pendataan | Admin menetapkan petugas ke kecamatan; petugas hanya mengubah data yang ditugaskan |
-| F05 | Form per kecamatan | Input C1,C2,C4,C6, jumlah rentan, data stok & kebutuhan untuk C5; C3/C5 diturunkan secara deterministik; jejak sumber/waktu |
+| F05 | Form per kecamatan | Observasi kalender/jam WIB; input C1,C2,C4, jarak C6 kilometer, jumlah rentan dan stok/kebutuhan; C3/C5 diturunkan; draf boleh parsial, pengiriman lengkap; error dekat kolom |
 | F06 | Verifikasi | Admin approve/reject dengan alasan; data yang belum diverifikasi tidak masuk ronde |
 | F07 | Snapshot/assessment round | Lock himpunan kecamatan, kriteria, nilai; jika revisi penting, buat ronde baru, jangan diam-diam mengubah ranking lama |
 | F08 | AHP per DM | 15 pasangan untuk 6 kriteria; input skala Saaty 1–9 + resiprokal; matrix diagonal 1, resiprokal otomatis; CR ≤ 0.10 untuk submit |
@@ -27,6 +29,13 @@ Lihat `PROJECT_CONTEXT.md`, `docs/WORKFLOWS.md`.
 | F10 | Borda grup | Saat ketiga DM valid, terbit ranking dengan poin 5,4,3,2,1 untuk 5 alternatif, generalisasikan N..1 untuk N alternatif; seri diselesaikan berdasar posisi pada ranking DM Kepala BPBD |
 | F11 | Finalisasi | Kepala BPBD mengesahkan rekomendasi; hasil menjadi read-only dan ada timestamp |
 | F12 | Dashboard audit | Status per role/per kecamatan/per DM; hasil lengkap dan data sumber dapat dilihat pengguna berwenang |
+| F13 | Peta dashboard Malang Raya | Poligon 41 kecamatan, filter kejadian/wilayah, pemilihan kecamatan dan legenda status; data bersumber dari pendataan, tanpa skor/hazard buatan |
+| F14 | PostgreSQL Supabase | Konfigurasi server melalui .env; SSL; migrasi schema sibantu; kredensial tidak berada di frontend; koneksi aktual perlu diuji setelah proyek tersedia |
+| F15 | Pengelolaan akun | Kepala BPBD membuat/mengaktifkan/menonaktifkan akun lain serta mengganti password pengguna; akun sendiri tidak dapat dinonaktifkan; audit tercatat |
+| F16 | Akun saya | Semua aktor dapat mengganti password dengan password lama dan konfirmasi; minimal 12 karakter; sesi lain dicabut setelah perubahan |
+| F17 | Simulasi empat kecamatan | Gedangan, Sumbermanjing Wetan, Dampit, Tirtoyudo dengan data fiktif dan ronde terpisah; tiap aktor menilai sendiri; seed idempoten |
+| F18 | Progres dan prioritas pada peta | Tampilkan progres 0/3 sampai 3/3; warna prioritas kelompok hanya dari hasil Borda aktual; perbedaan laporan terbaru/snapshot ronde dijelaskan |
+| F19 | Ruang kerja Koordinator | Tugas saya berupa kartu kecamatan/status, pencarian dan filter; daftar administrasi kejadian tidak tampil; pendaftaran kejadian tetap ditolak server untuk Koordinator |
 
 ## Fitur opsional (jangan blok MVP)
 - PDF/CSV export, grafik ranking, peta berbasis koordinat valid, unggah lampiran, multi-petugas, notifikasi in-app, refresh data BMKG secara manual (bukan otomatis).
@@ -48,7 +57,7 @@ Lihat `PROJECT_CONTEXT.md`, `docs/WORKFLOWS.md`.
 
 ## Validasi data
 - Waktu kejadian, sumber rujukan, wilayah kasus valid; dukung placeholder sementara hanya pada *draft*.
-- C1 integer ≥0; kelompok rentan integer ≥0 dan ≤ C1; C2,C4 integer 1..5; C5 0..100; C6 >=0, finite.
+- C1 integer ≥0; kelompok rentan integer ≥0 dan ≤ C1; C2,C4 integer 1..5; C5 0..100; C6 jarak kilometer >=0, finite, bertipe benefit. Nilai jam versi sebelumnya tidak boleh menjadi nilai kilometer.
 - C3 diturunkan 100×kelompok_rentan/C1; jika C1 = 0 dan rentan = 0, C3 = 0 dengan flag no-evacuees; jika C1 = 0 dan rentan > 0, reject.
 - Untuk C5: stok/kebutuhan yang dinyatakan setara paket-or-equivalent dan periode yang sama; C5 = min(100,100×stok/kebutuhan). Bila kebutuhan = 0 → minta verifikasi khusus; jangan membagi nol diam-diam.
 - Setiap form punya `observed_at`, `source_note`, `entered_by`; audit perubahan.

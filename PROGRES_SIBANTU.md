@@ -1,5 +1,105 @@
 # Progres Pengembangan SiBantu
 
+**Pembaruan terakhir:** 24 November 2026.
+
+## Redesain UI "Pusat Kendali" (24 November 2026)
+
+- Seluruh halaman memakai tema gelap baru (`static/theme.css`) mengikuti referensi dashboard komando bencana; panduan di `design-system/sibantu/MASTER.md`, keputusan ADR-025.
+- Header baru: identitas BPBD · Malang Raya, jam WIB langsung, avatar akun, tab berikon (Ringkasan Operasi, Pendataan Wilayah, Penilaian AHP, Hasil Kelompok, Pengguna) dan skip link.
+- Dashboard: pemilih operasi aktif, 4 KPI (kecamatan terdampak, total pengungsi C1, status pendataan, penilaian 0–3), peta gelap dengan kontrol vertikal dan strip legenda, gauge progres keputusan kelompok, umpan status wilayah terdampak, tabel prioritas Borda, dan daftar 41 kecamatan yang dapat dibuka.
+- Tidak ada angka hardcoded: peringkat/poin hanya dari hasil ronde, gauge dari jumlah aktor yang mengirim.
+- Label peta tidak lagi bertumpuk: posisi label memakai titik tengah luas poligon (dijamin di dalam wilayah), lalu penempatan menghindari tabrakan. Wilayah terpilih/terdampak didahulukan; label yang digeser diberi garis penunjuk, label kecamatan lain yang tidak muat disembunyikan sampai peta diperbesar.
+- 33 pengujian Python dan 4 pengujian JavaScript lulus. Diperiksa di browser (SQLite sementara + seed SIMULASI, bukan Supabase) pada 1440px dan 375px: login, dashboard, pemilihan kecamatan, Pendataan, Penilaian; tanpa scroll horizontal.
+
+
+## Form penilaian bertahap untuk ketiga decision maker
+
+- Kepala BPBD, Koordinator Lapangan dan Perwakilan Dinas Sosial memakai template penilaian yang sama. Form aktif menampilkan satu pasangan kriteria, pilihan kriteria/nilai sama penting, lalu tingkat kepentingannya.
+- Nama kriteria ditampilkan lengkap. Pilihan utama 3/5/7/9 memakai penjelasan verbal; nilai antara 2/4/6/8 tersedia melalui bagian yang dapat dibuka. Seluruh 17 pilihan Saaty dan nilai resiprokal tetap didukung tanpa perubahan rumus.
+- Tersedia progres jawaban, Sebelumnya/Berikutnya, tinjauan semua jawaban dengan tombol Ubah, dan validasi jawaban belum lengkap. Navigasi mempertahankan isian di halaman; penyimpanan ke database tetap memerlukan Simpan draf atau Kirim penilaian. Cek konsistensi hanya menghitung pratinjau.
+- Draf/hasil tetap terpisah per aktor dan ronde. Penilaian terkirim serta ronde arsip tetap baca-saja. Jika JavaScript tidak aktif, form pilihan biasa dengan nama lengkap dan penjelasan verbal tetap dapat digunakan.
+- **33 pengujian Python dan 4 pengujian JavaScript lulus** setelah koneksi lingkungan pulih. Pengujian mencakup semua pilihan Saaty, penyimpanan draf parsial, arah resiprokal, dan alur tiga aktor. Verifikasi visual/interaksi di browser belum dijalankan.
+
+## Revisi Koordinator Lapangan dan C6 jarak
+
+- Waktu observasi memakai pilihan tanggal/jam WIB dengan batas waktu kejadian dan waktu saat ini. Validasi server menolak waktu sebelum kejadian, masa depan, jarak negatif/non-finite dan laporan yang tidak lengkap saat dikirim.
+- C6 laporan baru menjadi jarak posko induk ke titik gempa (km), benefit. Tidak ada input waktu sejak bantuan terakhir pada formulir Koordinator.
+- Halaman utama Koordinator menampilkan Tugas saya, ringkasan status, kartu kecamatan, pencarian dan filter. Daftar administrasi kejadian tidak tampil; POST pendaftaran kejadian tetap ditolak untuk Koordinator.
+- Form dibagi menjadi empat kelompok, dengan bantuan pengisian, error dekat kolom, ringkasan error yang menerima fokus, pratinjau C3/C5, indikator proses kirim dan tata letak responsif. Panduan desain ada di design-system/sibantu/pages/coordinator.md. Tidak ditambahkan dependensi UI atau font eksternal.
+- Migrasi schema versi 6 menambah field_reports.criteria_version. Ronde/laporan versi 1.0 tetap menjadi arsip. Angka jam lama tidak dikonversi menjadi kilometer. Nilai C6 yang belum diperbarui ditampilkan kosong pada data terbaru, bukan sebagai km palsu.
+- Supabase mempunyai empat versi laporan baru untuk contoh aplikasi dan ronde 3 versi 2.0. Jarak fiktif: Gedangan 38 km, Sumbermanjing Wetan 52 km, Dampit 44 km, Tirtoyudo 61 km. Ronde 1/2 dan empat laporan lama tidak berubah; checksum isi sebelum/sesudah cocok. Ketiga penilaian ronde baru masih kosong.
+- Perubahan skema C6 tidak menambah MOORA/ELECTRE atau mengganti rumus AHP/TOPSIS/Borda. Pemeriksaan visual browser otomatis masih belum tersedia pada lingkungan agent.
+
+## Simulasi Malang Raya empat kecamatan
+
+Kasus GB-SIM-MLG-001 ada di Supabase sebagai **SIMULASI**, kejadian ID 1 dan ronde aktif ID 3 dengan C6 jarak. Ronde ID 2 menjadi arsip kriteria sebelumnya. Empat laporan terbaru berstatus VERIFIED dengan catatan verifikasi otomatis khusus latihan. Penilaian Kepala BPBD, Koordinator Lapangan, dan Dinas Sosial masih kosong pada ronde baru (0/3).
+
+| Kecamatan | Kode | C1 pengungsi | C2 kerusakan | C3 rentan (%) | C4 gangguan | C5 kecukupan (%) | C6 km |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Gedangan | 35.07.29 | 1600 | 4 | 20 | 4 | 16,67 | 38 |
+| Sumbermanjing Wetan | 35.07.04 | 1850 | 5 | 30 | 4 | 28,57 | 52 |
+| Dampit | 35.07.05 | 2100 | 3 | 40 | 3 | 43,75 | 44 |
+| Tirtoyudo | 35.07.30 | 1200 | 4 | 45 | 5 | 16 | 61 |
+
+Total pengungsi contoh 6750 orang. File sumber examples/malang_raya_simulation.json kini menggunakan C6 jarak sesuai revisi pengguna. Perubahan metode selain tiga metode yang tersedia tetap menunggu keputusan lanjutan.
+
+Dashboard menandai empat wilayah dengan warna jingga, menampilkan progres tiga aktor dan rincian kriteria ketika kecamatan dipilih. Pilihan peta: wilayah terdampak, status pendataan, prioritas kelompok. Mode prioritas baru tersedia setelah tiga aktor mengirim; warna/ranking dihitung dari Borda, tidak ditetapkan pada data seed. Tersedia filter fokus empat kecamatan.
+
+Migrasi sibantu_case_decision_rounds ke versi 5 menambahkan decision_rounds dan round_assessments. Ronde/snapshot/penilaian lama disalin tanpa menimpa tabel asal. Laporan terbaru tidak mengubah ronde terkunci; setelah finalisasi dan verifikasi laporan baru, Kepala BPBD dapat membuka ronde baru. Perintah seed-malang-simulation idempoten dan tidak mereset penilaian yang sudah dikirim.
+
+## Revisi formulir kejadian, 21 November 2026
+
+- Kode kejadian mendapat placeholder GB-001 dan penjelasan kode internal/nomor urut. Kode tetap diisi pengguna dan unik per kejadian.
+- Waktu kejadian menggunakan kontrol datetime-local untuk memilih tanggal dan jam, disertai keterangan WIB. Pengetikan mengikuti format kontrol browser; pengguna tidak perlu menulis ISO atau zona waktu.
+- Backend mengartikan pilihan tanpa zona sebagai WIB dan menyimpannya sebagai UTC. Format lama dengan zona tetap diterima. Detail kejadian menampilkan DD/MM/YYYY, HH:MM WIB.
+- Pilihan waktu dipertahankan setelah validasi/duplikasi gagal. Waktu tidak valid atau masa depan ditolak. Tidak ada perubahan schema atau data lama.
+
+Koneksi aplikasi ke Supabase sudah dikonfirmasi berhasil oleh pengguna. Tahap ini melanjutkan login, pengelolaan tiga aktor, dan dashboard Malang Raya. Perubahan metode perhitungan tetap ditunda.
+
+## Hasil terbaru
+
+| Bagian | Implementasi |
+|---|---|
+| Tiga aktor | Kepala BPBD merangkap administrasi; Koordinator Lapangan merangkap pendataan; Perwakilan Dinas Sosial membaca kebutuhan dan ikut penilaian. |
+| Akun awal | Tiga akun aktif sudah dibuat di Supabase: bpbd@sibantu.local, lapangan@sibantu.local, sosial@sibantu.local. Password acak disimpan di instance/AKUN_AWAL_SIBANTU.txt, di luar Git. |
+| Login | Email/password, hash scrypt, CSRF, pembatasan percobaan, cookie HTTPOnly/SameSite, logout, pengecekan akun aktif dan versi sesi. |
+| Pengguna | Kepala BPBD membuat akun, mengaktifkan/menonaktifkan akun lain, serta mengganti password pengguna melalui /pengguna. Akun sendiri tidak dapat dinonaktifkan. |
+| Akun saya | Semua aktor dapat mengganti password sendiri melalui /akun dengan password lama dan konfirmasi password baru. |
+| Pencabutan sesi | Password/status berubah menaikkan session_version; sesi lain dan cookie lama ditolak. Aktor diperiksa ulang di dalam transaksi administrasi. |
+| Audit akun | Pembuatan akun, aktivasi/nonaktivasi, reset password dan perubahan password sendiri tercatat tanpa menyimpan password asli. |
+| Operasional | BPBD mendaftarkan kejadian, menyetujui usulan kecamatan, menugaskan Koordinator dan memverifikasi laporan. Koordinator mengusulkan/mendata/memperbaiki laporan. Dinas Sosial dapat membaca laporan. |
+| Dashboard | Peta 41 kecamatan dengan mode terdampak/status/prioritas, fokus wilayah terdampak, nilai kriteria dan progres tiga aktor. Geometri lokal; warna prioritas hanya dari hasil kelompok aktual. |
+| Pesan aplikasi | Halaman kesalahan 400/403/404/409/413/500 dalam Bahasa Indonesia, dengan tautan kembali. |
+| Supabase | Schema privat sibantu memiliki 14 tabel versi 6 dan tag versi kriteria per laporan. Role database backend sibantu_app berbeda dari tiga role pengguna aplikasi. |
+| Perhitungan | Rumus AHP/TOPSIS/Borda dipertahankan, C6 versi 2.0 memakai jarak km benefit. Ronde baru dari laporan terverifikasi; MOORA/ELECTRE belum ditambahkan. |
+
+## Pengujian dan batas verifikasi
+
+- **31 pengujian otomatis lulus** dengan `python -m unittest discover -s tests -v`. Enam pengujian Koordinator mencakup halaman tugas sesuai peran, kalender observasi WIB, validasi jarak, draf parsial, C6 benefit, migrasi dan preservasi arsip lama. Alur tiga aktor, akun/sesi, pendataan dan perhitungan tetap lulus.
+- `node --check static/malang-map.js` berhasil.
+- Query server sebagai sibantu_app memastikan kasus simulasi ID 1, ronde 2 dengan empat kecamatan, empat laporan VERIFIED dan nol penilaian aktor. Query sebelumnya memastikan tiga akun aktif dengan hash scrypt. Akses schema untuk anon tidak diberikan.
+- Uji baca/tulis sebelumnya sebagai role sibantu_app berhasil di server dan transaksi uji dibatalkan. Pengguna sudah mengonfirmasi perintah database-status berhasil dari terminalnya.
+- HTTP langsung dari runtime agent dibatasi jaringan, termasuk localhost. Chrome otomatis juga gagal diluncurkan. Karena itu, pengujian request memakai Flask test client dengan SQLite sementara; hasil tersebut tidak diklaim sebagai uji browser atau koneksi langsung ke Supabase.
+- Pemeriksaan visual desktop/mobile dan login melalui browser pengguna masih perlu dilakukan. Tidak ada screenshot yang diklaim sebagai hasil verifikasi.
+
+## Cara menjalankan
+
+1. Buka folder UAS dan jalankan JALANKAN_SIBANTU.bat, atau jalankan `python app.py` dengan GDSS_PORT=5050.
+2. Buka http://127.0.0.1:5050/login.
+3. Lihat email/password awal di instance/AKUN_AWAL_SIBANTU.txt. Klik nama akun setelah login untuk mengganti password.
+4. Pilih simulasi empat kecamatan di Dashboard lalu klik Buka penilaian saya. Ketiga aktor mengirim penilaian masing-masing. Refresh dashboard untuk melihat progres; setelah 3/3, pilih mode Prioritas bantuan kelompok.
+5. Jika server versi lama masih berjalan, hentikan dengan Ctrl+C pada terminalnya lalu jalankan kembali agar perubahan kode dimuat.
+
+## Penyimpanan dan keamanan database
+
+URI koneksi disimpan pada .env; file ini dan folder instance diabaikan Git. Schema sibantu tidak dibuka ke Data API dan role anon/authenticated tidak memiliki akses schema. Backend adalah pemilik tabel; otorisasi pengguna ditegakkan melalui Flask. Auth aplikasi belum menggunakan Supabase Auth.
+
+Advisor memberi INFO RLS tanpa policy pada 14 tabel privat. RLS menolak akses non-owner; backend sebagai pemilik menjalankan operasi aplikasi. [Penjelasan advisor](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy). Tidak ada password asli pada tabel audit atau migrasi server; provisioning role koneksi menggunakan verifier SCRAM.
+
+Perubahan kode tahap ini masih berada di workspace lokal; belum dipush pada tahap ini. Riwayat di bawah mendeskripsikan versi sebelumnya.
+
+## Riwayat 14 November 2026
+
 **Tanggal pembaruan** 14 November 2026  
 **Branch** `main`  
 **Commit implementasi terakhir** [`eb28e27` – Add SiBantu field reporting and verification](https://github.com/azkafariqiuinmalang/SiBantu/commit/eb28e27f50ef984ec2a675350f574721ea65ce80)

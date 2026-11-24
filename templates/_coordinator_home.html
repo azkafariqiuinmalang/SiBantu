@@ -1,0 +1,37 @@
+<section class="task-stats" aria-label="Ringkasan tugas pendataan">
+  <div><span>Total tugas</span><strong>{{ task_stats.total }}</strong><small>Kecamatan ditugaskan</small></div>
+  <div><span>Perlu dikerjakan</span><strong>{{ task_stats.todo }}</strong><small>Termasuk pembaruan C6</small></div>
+  <div><span>Menunggu verifikasi</span><strong>{{ task_stats.submitted }}</strong><small>Dalam pemeriksaan BPBD</small></div>
+  <div><span>Terverifikasi</span><strong>{{ task_stats.verified }}</strong><small>Memakai C6 terbaru</small></div>
+</section>
+<section class="task-section" aria-labelledby="task-title">
+  <div class="task-section-head"><div><h2 id="task-title">Tugas saya</h2><p>Pilih kecamatan untuk melanjutkan pendataan.</p></div>
+    <span id="task-count" role="status" aria-live="polite">{{ assignments|length }} tugas</span>
+  </div>
+  {% if assignments %}<div class="task-filters">
+    <label for="task-search">Cari tugas<input type="search" id="task-search" placeholder="Nama kecamatan atau kejadian" autocomplete="off"></label>
+    <label for="task-status">Status laporan<select id="task-status">
+      <option value="">Semua status</option><option value="TODO">Perlu dikerjakan</option>
+      <option value="DRAFT">Draf</option><option value="SUBMITTED">Menunggu verifikasi</option>
+      <option value="VERIFIED">Terverifikasi</option><option value="REJECTED">Perlu perbaikan</option>
+    </select></label>
+  </div>{% endif %}
+  <div class="task-grid">
+  {% for task in assignments %}
+    {% set needs_update = task.criteria_version and task.criteria_version != current_criteria_version %}
+    {% set todo = not task.status or task.status in ['DRAFT','REJECTED'] or needs_update %}
+    <article class="task-card" data-task data-search="{{ task.district_name }} {{ task.case_name }} {{ task.case_code }}" data-status="{{ task.status or 'EMPTY' }}" data-todo="{{ '1' if todo else '0' }}">
+      <div class="task-card-top"><span class="case-code">{{ task.case_code }}</span>{{ simulation(task) }}</div>
+      <h3>{{ task.district_name }}</h3><p class="task-case">{{ task.case_name }}</p>
+      <div class="task-state"><span class="report-status {{ (task.status or 'EMPTY')|lower }}">{{ labels[task.status] if task.status else 'Belum diisi' }}</span>
+        {% if task.report_version %}<small>Versi {{ task.report_version }}</small>{% endif %}</div>
+      {% if needs_update %}<p class="task-help">C6 perlu diperbarui menjadi jarak dalam kilometer.</p>{% else %}<p class="task-help">Catat kondisi, kebutuhan logistik, dan sumber observasi.</p>{% endif %}
+      <a class="button-link task-action" href="{{ url_for('fieldwork_assignment',assignment_id=task.id) }}">
+        {{ 'Lihat laporan' if task.status == 'SUBMITTED' else 'Perbarui laporan' if needs_update or task.status == 'VERIFIED' else 'Lanjutkan draf' if task.status == 'DRAFT' else 'Perbaiki laporan' if task.status == 'REJECTED' else 'Isi laporan' }}
+        <span aria-hidden="true">&rarr;</span>
+      </a>
+    </article>
+  {% else %}<div class="task-empty"><h3>Belum ada tugas pendataan</h3><p>Tugas kecamatan akan tampil setelah Kepala BPBD memberikan penugasan.</p></div>{% endfor %}
+  </div>
+  <p id="task-no-match" class="task-empty" hidden>Tidak ada tugas yang sesuai. Coba kata kunci atau status lain.</p>
+</section>

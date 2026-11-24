@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} | SiBantu</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='assessment.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+</head>
+<body>
+  {% if current_user %}{% include '_navigation.html' %}{% endif %}
+  <main class="shell" id="konten"><section class="panel permission-message">
+    <p class="eyebrow">SiBantu</p><h1>{{ title }}</h1><p>{{ message }}</p>
+    <a class="button-link" href="{{ url_for('dashboard') if current_user else url_for('login') }}">{{ 'Kembali ke dashboard' if current_user else 'Kembali ke halaman masuk' }}</a>
+  </section></main>
+</body>
+</html>
