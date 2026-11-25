@@ -8,7 +8,7 @@ from contextlib import closing
 from pathlib import Path
 
 from app import ROOT, create_app
-from decision_engine import PAIRS, SCALE, ahp, borda, topsis
+from decision_engine import PAIRS, SCALE, ahp, borda, inconsistency_hints, topsis
 from support import login, seed_users
 
 
@@ -24,6 +24,29 @@ class DecisionEngineTest(unittest.TestCase):
         self.assertAlmostEqual(ratios["weights"][0], 2 / 7)
         self.assertAlmostEqual(ratios["matrix"][1][0], 0.5)
         self.assertFalse(ahp(["9", "1/9"] + ["1"] * 13)["valid"])
+
+    def test_inconsistency_hints_point_to_contradicting_pairs_without_changing_answers(self):
+        cycle = ["1"] * 15
+        cycle[0], cycle[5], cycle[1] = "9", "9", "1/9"  # C1>C2, C2>C3, tetapi C3>C1
+        original = list(cycle)
+        before = ahp(cycle)["cr"]
+        hints = inconsistency_hints(cycle)
+        self.assertEqual(cycle, original)
+        self.assertEqual(len(hints), 3)
+        self.assertEqual({hint["index"] for hint in hints}, {0, 1, 5})
+        for hint in hints:
+            self.assertIn(hint["suggested"], SCALE)
+            self.assertNotEqual(hint["suggested"], hint["chosen"])
+            self.assertEqual(hint["chosen"], cycle[hint["index"]])
+            trial = list(cycle)
+            trial[hint["index"]] = hint["suggested"]
+            self.assertAlmostEqual(ahp(trial)["cr"], hint["cr_after"])
+            self.assertLess(hint["cr_after"], before)
+        self.assertEqual(hints, inconsistency_hints(cycle))
+        self.assertEqual(inconsistency_hints(["1"] * 15), [])
+        mild = ["9", "1/9"] + ["1"] * 13
+        self.assertFalse(ahp(mild)["valid"])
+        self.assertIn(inconsistency_hints(mild)[0]["index"], {0, 1})  # dua pasangan ekstrem bernilai 9
 
     def test_topsis_cost_zero_columns_and_identical_scores(self):
         districts = [
@@ -69,6 +92,26 @@ class AssessmentTest(unittest.TestCase):
         data = {f"pair_{index}": value for index, value in enumerate(choices)}
         data.update(token=self.token, revision=revision, action=action,round_id="1")
         return self.client.post(f"/penilaian/{role}", data=data, follow_redirects=follow)
+
+    def test_rejected_consistency_shows_pair_hints_and_saves_nothing(self):
+        cycle = ["1"] * 15
+        cycle[0], cycle[5], cycle[1] = "9", "9", "1/9"
+        for action in ("preview", "submit"):
+            response = self.post("bpbd", action, cycle)
+            self.assertEqual(response.status_code, 200 if action == "preview" else 422)
+            page = response.get_data(as_text=True)
+            self.assertIn("Pasangan yang paling memengaruhi CR", page)
+            self.assertIn("Saran ini tidak mengubah jawaban Anda", page)
+            self.assertIn('class="ahp-hint-link" href="#pair-0" data-pair="0"', page)
+            self.assertIn("Pilihan Anda: Jumlah pengungsi mutlak lebih penting daripada Kerusakan hunian (skala 9).", page)
+            self.assertIn('<strong class="ahp-hint-suggestion">Jumlah pengungsi dan Kerusakan hunian sama penting (skala 1)</strong>', page)
+            self.assertIn('<li data-pair="0" data-chosen="9">', page)
+        self.assertIn('data-left-index="0" data-right-index="1" data-left-code="C1" data-right-code="C2"', page)
+        with closing(sqlite3.connect(self.database)) as db:
+            self.assertIsNone(db.execute("SELECT 1 FROM round_assessments WHERE role='bpbd'").fetchone())
+        self.assertIn('<a href="#ahp-hints-title">Lihat saran pasangan</a>', page)
+        consistent = self.post("bpbd", "preview", ["1"] * 15).get_data(as_text=True)
+        self.assertNotIn("Pasangan yang paling memengaruhi CR", consistent)
 
     def test_guided_form_has_accessible_fallback_and_all_saaty_values(self):
         class SelectParser(HTMLParser):

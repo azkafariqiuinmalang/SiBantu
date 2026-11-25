@@ -11,7 +11,7 @@
 <div class="report-field"><label for="{{ key }}">{{ label }} <span class="required-mark" aria-hidden="true">*</span></label>
   <select id="{{ key }}" name="{{ key }}" required aria-describedby="{{ key }}-hint {{ key }}-error" {% if field_errors.get(key) %}aria-invalid="true"{% endif %}>
     <option value="">Pilih tingkat kondisi</option>{% for score,name in [(1,'Sangat rendah'),(2,'Rendah'),(3,'Sedang'),(4,'Tinggi'),(5,'Sangat tinggi')] %}
-    <option value="{{ score }}" {% if form.get(key)|string == score|string %}selected{% endif %}>{{ score }} — {{ name }}</option>{% endfor %}
+    <option value="{{ score }}" {% if form.get(key)|string == score|string %}selected{% endif %}>{{ score }} ({{ name }})</option>{% endfor %}
   </select><small id="{{ key }}-hint">{{ hint }}</small><small class="field-error" id="{{ key }}-error" {% if not field_errors.get(key) %}hidden{% endif %}>{{ field_errors.get(key,'') }}</small>
 </div>{% endmacro %}
 {% if error %}<div class="report-error-summary" role="alert" tabindex="-1" id="report-errors"><h2>Laporan belum dapat disimpan</h2>
@@ -45,14 +45,14 @@
         {{ report_input('vulnerable_people','Pengungsi rentan (orang)','Bagian dari total pengungsi, bukan jumlah tambahan.',maximum=9223372036854775807) }}
       </div></fieldset>
       <fieldset class="report-group"><legend><span>03</span> Kondisi wilayah</legend><div class="report-two-columns">
-        {{ score_select('housing_damage_score','Kerusakan hunian','Skala 1–5, mengikuti pedoman pendataan yang disepakati.') }}
-        {{ score_select('essential_services_disruption_score','Gangguan layanan dasar','Skala 1–5 untuk tingkat gangguan layanan dasar.') }}
+        {{ score_select('housing_damage_score','Kerusakan hunian','Skala 1 sampai 5, mengikuti pedoman pendataan yang disepakati.') }}
+        {{ score_select('essential_services_disruption_score','Gangguan layanan dasar','Skala 1 sampai 5 untuk tingkat gangguan layanan dasar.') }}
       </div></fieldset>
       <fieldset class="report-group"><legend><span>04</span> Logistik dan jarak</legend><div class="report-two-columns">
         {{ report_input('available_package_equivalents','Stok logistik (setara paket)','Gunakan periode dan satuan yang sama dengan kebutuhan.',step='any') }}
         {{ report_input('required_package_equivalents','Kebutuhan logistik (setara paket)','Kebutuhan nol memerlukan verifikasi khusus.',step='any') }}
       </div>
-        {{ report_input('distance_to_epicenter_km','Jarak posko induk ke titik gempa (km)','C6 · benefit. Masukkan jarak dalam kilometer, misalnya 12,5 km.',step='any') }}
+        {{ report_input('distance_to_epicenter_km','Jarak posko induk ke titik gempa (km)','C6, benefit. Masukkan jarak dalam kilometer, misalnya 12,5 km.',step='any') }}
       </fieldset>
       <div class="report-actions"><a href="{{ url_for('fieldwork_home') }}">Kembali ke tugas</a><div>
         <button class="secondary" name="action" value="draft" formnovalidate>Simpan draf</button>
@@ -63,10 +63,10 @@
       {% if latest %}<a class="button-link" href="{{ url_for('fieldwork_review',report_id=latest.id) }}">Lihat laporan terkirim</a>{% endif %}</div>{% endif %}
   </section>
   <aside class="report-sidebar">
-    <section class="report-summary"><p class="eyebrow">Dihitung otomatis</p><h2>Ringkasan kriteria</h2><p class="summary-help">Persentase diperbarui dari angka yang Anda isi pada laporan.</p>
-      <dl><div><dt>C3 · Pengungsi rentan</dt><dd><output id="vulnerable-preview">{{ ('%.2f'|format(summary_values[2]))+'%' if summary_values else '—' }}</output></dd></div>
-        <div><dt>C5 · Kecukupan logistik</dt><dd><output id="logistics-preview">{{ ('%.2f'|format(summary_values[4]))+'%' if summary_values else '—' }}</output></dd></div>
-        <div><dt>C6 · Jarak ke titik gempa</dt><dd><output id="distance-preview">{{ ('%g'|format(summary_values[5]))+' km' if summary_values and not needs_distance_update else '—' }}</output></dd></div></dl>
+    <section class="report-summary"><h2>Ringkasan kriteria</h2><p class="summary-help">Dihitung otomatis. Persentase diperbarui dari angka yang Anda isi pada laporan.</p>
+      <dl><div><dt>C3 Pengungsi rentan</dt><dd><output id="vulnerable-preview">{{ ('%.2f'|format(summary_values[2]))+'%' if summary_values else 'Belum lengkap' }}</output></dd></div>
+        <div><dt>C5 Kecukupan logistik</dt><dd><output id="logistics-preview">{{ ('%.2f'|format(summary_values[4]))+'%' if summary_values else 'Belum lengkap' }}</output></dd></div>
+        <div><dt>C6 Jarak ke titik gempa</dt><dd><output id="distance-preview">{{ ('%g'|format(summary_values[5]))+' km' if summary_values and not needs_distance_update else 'Belum lengkap' }}</output></dd></div></dl>
       <p class="summary-footnote">C5 bertipe cost. C6 bertipe benefit, sesuai rancangan penilaian.</p>
     </section>
     <section class="report-history"><h2>Riwayat laporan</h2><ol>

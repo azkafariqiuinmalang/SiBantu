@@ -19,6 +19,20 @@ class LoginDashboardTest(unittest.TestCase):
         self.client = self.app.test_client()
         seed_users(self.database)
 
+    def test_logo_and_favicon_on_public_and_internal_pages(self):
+        assets = ("img/logo/sibantu-mark.svg", "img/logo/favicon.svg", "img/logo/apple-touch-icon.png")
+        for path in ("/login", "/dashboard"):
+            if path == "/dashboard":
+                login(self.client, "bpbd")
+            page = self.client.get(path).get_data(as_text=True)
+            self.assertIn('class="brand-mark"', page)
+            self.assertIn('alt=""', page)  # dekoratif: nama SiBantu sudah ada pada teks tautan
+            for asset in assets:
+                self.assertIn(f"/static/{asset}", page)
+        for asset in assets:
+            with self.client.get(f"/static/{asset}") as response:
+                self.assertEqual(response.status_code, 200)
+
     def test_login_protection_role_checks_and_logout(self):
         for path in ("/", "/dashboard", "/api/map", "/pendataan", "/penilaian/bpbd", "/hasil"):
             response = self.client.get(path)

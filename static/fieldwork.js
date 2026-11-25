@@ -23,9 +23,9 @@ if (reportForm) {
     const total = value("evacuees"), vulnerable = value("vulnerable_people");
     const stock = value("available_package_equivalents"), required = value("required_package_equivalents");
     const distance = value("distance_to_epicenter_km");
-    document.getElementById("vulnerable-preview").textContent = total !== null && vulnerable !== null && vulnerable <= total && total >= 0 && vulnerable >= 0 ? number.format(total ? vulnerable / total * 100 : 0) + "%" : "—";
-    document.getElementById("logistics-preview").textContent = required === 0 ? "Perlu verifikasi" : stock !== null && required > 0 && stock >= 0 ? number.format(Math.min(100, stock / required * 100)) + "%" : "—";
-    document.getElementById("distance-preview").textContent = distance !== null && Number.isFinite(distance) && distance >= 0 ? number.format(distance) + " km" : "—";
+    document.getElementById("vulnerable-preview").textContent = total !== null && vulnerable !== null && vulnerable <= total && total >= 0 && vulnerable >= 0 ? number.format(total ? vulnerable / total * 100 : 0) + "%" : "Belum lengkap";
+    document.getElementById("logistics-preview").textContent = required === 0 ? "Perlu verifikasi" : stock !== null && required > 0 && stock >= 0 ? number.format(Math.min(100, stock / required * 100)) + "%" : "Belum lengkap";
+    document.getElementById("distance-preview").textContent = distance !== null && Number.isFinite(distance) && distance >= 0 ? number.format(distance) + " km" : "Belum lengkap";
   }
   reportForm.addEventListener("input", updateSummary);
   reportForm.addEventListener("focusout", event => {

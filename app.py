@@ -9,7 +9,7 @@ from pathlib import Path
 
 from flask import Flask, abort, redirect, render_template, request, session, url_for
 
-from decision_engine import CRITERIA, PAIRS, SCALE, VERSION, SUPPORTED_VERSIONS, criteria_for_version, ahp, borda, demo_snapshot, topsis
+from decision_engine import CRITERIA, PAIRS, SCALE, VERSION, SUPPORTED_VERSIONS, criteria_for_version, ahp, borda, inconsistency_hints, demo_snapshot, topsis
 from fieldwork import register_fieldwork
 from auth import ROLES, register_auth, require_role
 from database import PostgresConnection, load_environment, migrate, sqlite_connection
@@ -114,6 +114,9 @@ def create_app(database=None):
         }
         if active and active["submitted_at"]:
             preview = json.loads(active["result"])["ahp"]
+        hints = []
+        if preview and not preview["valid"] and all(choice in SCALE for choice in choices):
+            hints = inconsistency_hints(choices)
         token = session.setdefault("form_token", secrets.token_urlsafe(24))
         return render_template(
             "assessment.html", roles=ROLES, role=role, active=active, assessments=assessments,
@@ -121,7 +124,7 @@ def create_app(database=None):
             snapshot=snapshot, preview=preview, results=results, message=message, token=token,
             group=json.loads(record["group_result"]) if record["group_result"] else [],
             section=section, form_revision=form_revision, rounds=rounds, selected_round_id=record["id"],
-            is_legacy=record["algorithm_version"] != VERSION,
+            is_legacy=record["algorithm_version"] != VERSION, hints=hints,
         ), status
 
     def check_form():
@@ -199,7 +202,7 @@ def create_app(database=None):
             except ValueError as error:
                 return show(role, choices, message=str(error), status=422, form_revision=form_revision)
             if not preview["valid"]:
-                return show(role, choices, preview, "CR melebihi 0,10. Tinjau ulang perbandingan.", 422,
+                return show(role, choices, preview, "CR melebihi 0,10. Tinjau ulang perbandingan; lihat saran pasangan pada panel Konsistensi AHP.", 422,
                             form_revision=form_revision)
 
         with connect() as db, db:

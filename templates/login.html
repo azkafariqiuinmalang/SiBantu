@@ -4,26 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Masuk | SiBantu</title>
+  <meta name="description" content="Masuk ke SiBantu, sistem pendataan dan prioritas bantuan pascagempa BPBD Malang Raya.">
   <link rel="stylesheet" href="{{ url_for('static', filename='assessment.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='img/logo/favicon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo/apple-touch-icon.png') }}">
 </head>
 <body class="login-page">
   <main class="login-shell" id="konten">
+    <figure class="login-photo">
+      <img src="{{ url_for('static', filename='img/tugu-malang.jpg') }}" width="1280" height="720"
+           alt="Tugu Kota Malang di tengah kolam teratai, di depan Balai Kota">
+      <figcaption>Tugu Kota Malang</figcaption>
+    </figure>
+    <div class="login-side">
     <section class="login-intro">
-      <span class="login-pulse" aria-hidden="true"></span>
       <a class="brand" href="{{ url_for('login') }}" aria-label="SiBantu">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="M12 9v6M9 12h6"/></svg>
-        </span>
-        <span class="brand-text"><small>BPBD · Malang Raya</small><strong>SiBantu</strong></span>
+        <img class="brand-mark" src="{{ url_for('static', filename='img/logo/sibantu-mark.svg') }}" width="56" height="56" alt="">
+        <strong><span class="brand-si">Si</span>Bantu</strong><span class="brand-tagline">BPBD Malang Raya</span>
       </a>
       <div>
-        <p class="eyebrow">Pusat Kendali Keputusan</p>
-        <h1>Informasi wilayah.<br><span>Prioritas bantuan.</span></h1>
-        <p>Pendataan kecamatan terdampak dan penentuan prioritas bantuan logistik pascagempa secara berkelompok (AHP · TOPSIS · Borda).</p>
+        <h1>Informasi wilayah, prioritas bantuan.</h1>
+        <p>Pendataan kecamatan terdampak dan penentuan prioritas bantuan logistik pascagempa secara berkelompok, dengan AHP, TOPSIS, dan Borda.</p>
       </div>
-      <p>Kabupaten Malang · Kota Malang · Kota Batu</p>
     </section>
     <section class="login-form">
       <h2>Masuk ke SiBantu</h2>
@@ -41,6 +45,11 @@
       </form>
       <p class="login-help">Akses akun dikelola oleh Kepala BPBD sebagai penanggung jawab sistem.</p>
     </section>
+    <footer class="login-foot">
+      <p class="login-regions">Kabupaten Malang, Kota Malang, dan Kota Batu</p>
+      <p class="login-credits">Foto: <a href="https://commons.wikimedia.org/wiki/File:Tugu_Kota_Malang_(3).jpg" target="_blank" rel="noopener">Ulumarifah</a> (CC BY-SA 4.0), melalui Wikimedia Commons.</p>
+    </footer>
+    </div>
   </main>
 </body>
 </html>

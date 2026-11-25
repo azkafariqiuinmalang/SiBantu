@@ -8,6 +8,9 @@ Input 15 nilai segitiga atas dari skala Saaty `{1,2,3,4,5,6,7,8,9}` dan kebalika
 
 Metode pembobotan MVP: **principal right eigenvector** dari matriks positif `A`, dihitung lewat power iteration dengan toleransi dan batas iterasi. Normalisasi bobot hingga `sum(w)=1`, `w_i>0`. Hitung `lambda_max` (mis. rata-rata `(Aw)_i/w_i`), `CI=(lambda_max-n)/(n-1)`, `CR=CI/RI`. Untuk `n=6`, `RI=1.24`. Terima bila `CR<=0.10` dengan toleransi floating-point kecil yang terdokumentasi; selain itu wajib revisi. Hindari menggabungkan pendekatan geometric mean dengan lambda dari metode eigen tanpa disadari. Simpan `algorithm_version`, bobot, lambda, CI, CR.
 
+### Saran perbaikan konsistensi (tampilan saja)
+`inconsistency_hints(comparisons)` dipanggil hanya bila CR > 0,10. Untuk setiap pasangan (i, j), nilai saran adalah skala Saaty terdekat (dalam skala log) dengan rasio bobot saat ini `w_i/w_j`. Pasangan diurutkan menurut CR bila hanya pasangan itu yang diganti (lalu indeks pasangan agar deterministik), dan maksimal tiga ditampilkan beserta perkiraan CR-nya. Fungsi ini tidak mengubah jawaban, bobot, maupun data tersimpan; DM tetap memutuskan sendiri.
+
 ### Fixture konsistensi
 `examples/ahp_consistent_matrix.json`: semua perbandingan 1, `w=1/6` setiap kriteria, `lambda_max=6`, `CI=0`, `CR=0`.
 

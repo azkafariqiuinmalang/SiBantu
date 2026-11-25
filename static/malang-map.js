@@ -9,10 +9,24 @@ const districtSelect = document.getElementById("district-filter");
 const detail = document.getElementById("district-detail");
 const mapMode = document.getElementById("map-mode");
 const affectedOnly = document.getElementById("affected-only");
-const colors = {
-  UNREGISTERED: "#16212c", PENDING: "#4b3f8f", ASSIGNED: "#1d4f78",
-  DRAFT: "#1d4f78", SUBMITTED: "#8a6210", REJECTED: "#8f2938", VERIFIED: "#17663b",
+// Warna peta dibaca dari token tema (static/theme.css), bukan ditulis di sini.
+const token = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const palette = {
+  land: token("--map-land"), edge: token("--map-edge"), affected: token("--map-affected"),
+  affectedEdge: token("--map-affected-edge"), selected: token("--map-selected"),
+  high: token("--map-priority-high"), low: token("--map-priority-low"),
+  label: token("--map-label"), halo: token("--map-halo"),
 };
+const colors = {
+  UNREGISTERED: palette.land, PENDING: token("--map-pending"), ASSIGNED: token("--map-assigned"),
+  DRAFT: token("--map-assigned"), SUBMITTED: token("--map-submitted"), REJECTED: token("--map-rejected"), VERIFIED: token("--map-verified"),
+};
+function mix(from, to, amount) {
+  const parse = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  const a = parse(from);
+  const b = parse(to);
+  return `rgb(${a.map((value, i) => Math.round(value + (b[i] - value) * amount)).join(", ")})`;
+}
 let features = [];
 let visible = [];
 let selected = "";
@@ -32,9 +46,9 @@ function fillColor(feature) {
   if (mapMode.value === "priority" && feature.group_rank) {
     const count = features.filter(item => item.group_rank).length;
     const step = (feature.group_rank - 1) / Math.max(1, count - 1);
-    return `hsl(350, ${88 - 40 * step}%, ${58 - 28 * step}%)`;
+    return mix(palette.high, palette.low, step);
   }
-  return "rgba(244, 63, 94, 0.42)";
+  return palette.affected;
 }
 
 function updateLegend() {
@@ -122,7 +136,7 @@ function drawLabels() {
   ctx.textBaseline = "middle";
   candidates.forEach(feature => {
     const important = feature.is_affected || feature.code === selected;
-    ctx.font = important ? "600 11px Segoe UI, sans-serif" : "10px Segoe UI, sans-serif";
+    ctx.font = (important ? "600 12px " : "11px ") + token("--font-sans");
     const label = (mapMode.value === "priority" && feature.group_rank ? `#${feature.group_rank} ` : "") + feature.name;
     const ax = offset.x + feature.anchor.x * scale;
     const ay = offset.y + feature.anchor.y * scale;
@@ -137,22 +151,22 @@ function drawLabels() {
     if (!spot) return;
     placed.push(spot.rect);
     if (spot.moved) {
-      ctx.strokeStyle = "rgba(230, 237, 243, .55)";
+      ctx.strokeStyle = palette.label;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(ax, ay);
       ctx.lineTo(spot.x, spot.y + (spot.y > ay ? -h / 2 : h / 2));
       ctx.stroke();
-      ctx.fillStyle = "#e6edf3";
+      ctx.fillStyle = palette.label;
       ctx.beginPath();
       ctx.arc(ax, ay, 2, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.strokeStyle = "#0a1017";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = palette.halo;
+    ctx.lineWidth = 3.5;
     ctx.lineJoin = "round";
     ctx.strokeText(label, spot.x, spot.y);
-    ctx.fillStyle = "#e6edf3";
+    ctx.fillStyle = palette.label;
     ctx.fillText(label, spot.x, spot.y);
   });
 }
@@ -177,12 +191,18 @@ function draw() {
   ctx.scale(scale, scale);
   visible.forEach(feature => {
     ctx.fillStyle = fillColor(feature);
-    ctx.shadowColor = feature.is_affected && mapMode.value !== "status" ? "rgba(244, 63, 94, 0.55)" : "transparent";
-    ctx.shadowBlur = feature.is_affected && mapMode.value !== "status" ? 14 : 0;
     ctx.fill(feature.path, "evenodd");
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = feature.code === selected ? "#4ade80" : feature.is_affected ? "#fb7185" : "#2c3e50";
-    ctx.lineWidth = (feature.code === selected ? 2.5 : feature.is_affected ? 1.6 : 0.7) / scale;
+    ctx.strokeStyle = feature.is_affected && mapMode.value !== "status" ? palette.affectedEdge : palette.edge;
+    ctx.lineWidth = (feature.is_affected ? 1.4 : 0.8) / scale;
+    ctx.stroke(feature.path);
+  });
+  // Kecamatan terpilih digambar terakhir agar garis sinyalnya tidak tertutup tetangga.
+  visible.filter(feature => feature.code === selected).forEach(feature => {
+    ctx.strokeStyle = palette.halo;
+    ctx.lineWidth = 5.5 / scale;
+    ctx.stroke(feature.path);
+    ctx.strokeStyle = palette.selected;
+    ctx.lineWidth = 3 / scale;
     ctx.stroke(feature.path);
   });
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -224,7 +244,7 @@ function choose(code) {
       criteriaMeta.forEach((criterion, index) => {
         const term = document.createElement("dt");
         const value = document.createElement("dd");
-        term.textContent = criterion.code + " · " + criterion.name;
+        term.textContent = criterion.code + " " + criterion.name;
         value.textContent = feature.criterion_values[index] == null ? "Belum diisi" : number.format(feature.criterion_values[index]) + " " + criterion.unit;
         values.append(term, value);
       });
@@ -233,8 +253,8 @@ function choose(code) {
     if (activeRound && feature.is_affected) {
       const ranking = document.createElement("p");
       ranking.textContent = activeRound.legacy ? "Perbarui C6 pada laporan untuk membuka ronde penilaian terbaru." : feature.group_rank
-        ? `Prioritas kelompok #${feature.group_rank} · ${feature.group_points} poin · Ronde ${activeRound.id}`
-        : `Menunggu penilaian lengkap · ${activeRound.submitted_count}/3 aktor sudah mengirim`;
+        ? `Prioritas kelompok #${feature.group_rank}, ${feature.group_points} poin, ronde ${activeRound.id}`
+        : `Menunggu penilaian lengkap: ${activeRound.submitted_count}/3 aktor sudah mengirim`;
       detail.append(ranking);
     }
     if (feature.case_url) {
@@ -330,7 +350,7 @@ fetch(canvas.dataset.url, { credentials: "same-origin" }).then(response => {
   activeRound = data.round;
   isSimulation = data.is_simulation;
   features = data.features.map(prepare);
-  message.textContent = "Geser untuk menjelajah · Gulir untuk memperbesar";
+  message.textContent = "Geser untuk menjelajah, gulir untuk memperbesar.";
   filter();
   updateLegend();
 }).catch(error => {

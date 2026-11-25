@@ -1,6 +1,31 @@
 # Progres Pengembangan SiBantu
 
-**Pembaruan terakhir:** 24 November 2026.
+**Pembaruan terakhir:** 25 November 2026.
+
+## Redesain visual "Lembar Survei" (25 November 2026)
+
+- Halaman login diberi satu foto Tugu Kota Malang (Ulumarifah, CC BY-SA 4.0, Wikimedia Commons) setinggi layar di kolom kiri, lengkap dengan kredit. Sumbernya dicatat di `static/img/SUMBER_FOTO.md`.
+- Palet direvisi (ADR-028): kertas abu dingin, tinta biru-hitam, dan sinyal biru petrol menggantikan manila-oranye yang terlalu mirip warna Claude.
+- Tema gelap "Pusat Kendali" diganti tema terang kertas-tinta (ADR-027, `design-system/sibantu/MASTER.md`). Alur setiap aktor, rute, form, dan perhitungan tidak berubah.
+- Pola yang terasa generik dibuang: latar navy bercahaya, kartu KPI berikon, gauge, titik status, label mono kapital, cahaya berdenyut di login, dan heading dua warna. Penggantinya buku angka bergaris, angka `n/3` beserta daftar aktor, chip status berteks, dan satu warna sinyal oranye.
+- Peta menjadi lembar survei bergrid. Kecamatan terpilih tampil sebagai kartu catatan lapangan. Warna kanvas kini dibaca dari token CSS, tidak lagi ditulis langsung di `malang-map.js`.
+- Teks meta yang dipisah titik tengah diganti kalimat biasa. Eyebrow dihapus dan isinya dipindah ke paragraf.
+- 35 pengujian Python dan 7 pengujian JavaScript lulus. Diperiksa di browser (SQLite sementara dan seed SIMULASI, bukan Supabase) pada 1440 dan 375 piksel: login, dashboard dengan mode peta terdampak dan prioritas, Pendataan (BPBD dan Koordinator), Penilaian AHP (form dan baca-saja), serta Hasil kelompok. Tidak ada scroll horizontal dan tidak ada error console.
+
+## Logo SiBantu (25 November 2026)
+
+- Logo "Tangan yang Menjadi Atap": dua tangan yang ujung jarinya bertemu membentuk atap di atas keluarga, dengan titik gempa kecil di bawah garis tanah. Berkas SVG/PNG, favicon, dan filosofi ada di `static/img/logo/`.
+- Logo dipasang di bilah atas semua halaman internal dan halaman login; favicon dan apple-touch-icon dipasang di semua template. Diuji otomatis dan diperiksa di browser pada 1440 dan 375 piksel.
+
+## Alat bantu konsistensi AHP (25 November 2026)
+
+- Masalah: setiap DM harus mencapai CR ≤ 0,10 dari 15 perbandingan, dan penilai mudah bingung pasangan mana yang perlu diubah.
+- **Urutkan kriteria dulu:** langkah awal opsional untuk mengurutkan C1–C6. Saat mengisi pasangan, sistem menampilkan urutan tersebut dan memberi peringatan bila arah pilihan berlawanan. Tidak memblokir dan tidak mengisi jawaban.
+- **Saran pasangan penyebab CR tinggi:** bila CR > 0,10 (Cek konsistensi atau Kirim), panel Konsistensi menampilkan hingga tiga pasangan, nilai yang lebih konsisten, dan perkiraan CR setelah perubahan, dengan tautan Ubah pasangan.
+- Rumus AHP/TOPSIS/Borda, batas CR, skema database, dan data tersimpan tidak berubah (ADR-026).
+- **Revisi UX:** perkiraan nilai dari jawaban lain per pasangan (mencegah salah besar, bukan hanya salah arah), saran CR dalam kalimat verbal, tanda saran langsung di daftar tinjauan, tautan dari pesan error, tombol Kembali ke tinjauan, peringatan perubahan belum disimpan, dan target gulir yang tidak tertutup header.
+- 35 pengujian Python dan 7 pengujian JavaScript lulus. Diperiksa di browser (SQLite sementara) pada 1440 dan 375 piksel: urutan, perkiraan dan peringatan, saran pasangan di panel dan tinjauan, Kembali ke tinjauan, serta tanpa scroll horizontal.
+
 
 ## Redesain UI "Pusat Kendali" (24 November 2026)
 

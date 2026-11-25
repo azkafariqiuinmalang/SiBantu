@@ -6,11 +6,13 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='assessment.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='img/logo/favicon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo/apple-touch-icon.png') }}">
 </head>
 <body>
   {% include '_navigation.html' %}
   <main class="shell" id="konten">
-    <div class="intro"><p class="eyebrow">{{ 'Administrasi' if section == 'users' else 'Pengaturan' }}</p>
+    <div class="intro">
       <h1>{{ 'Pengguna SiBantu' if section == 'users' else 'Akun saya' }}</h1>
       <p>{{ 'Kelola akses Kepala BPBD, Koordinator Lapangan, dan Perwakilan Dinas Sosial.' if section == 'users' else 'Perbarui kata sandi untuk menjaga akses akun Anda.' }}</p>
     </div>
@@ -52,12 +54,12 @@
     </section>
     <section class="panel"><h2>Aktivitas akun terbaru</h2>
       {% set actions = {'CREATE':'Membuat akun','ACTIVATE':'Mengaktifkan akun','DEACTIVATE':'Menonaktifkan akun','RESET_PASSWORD':'Mengganti kata sandi pengguna','CHANGE_PASSWORD':'Mengubah kata sandi sendiri'} %}
-      <ul class="account-history">{% for item in history %}<li><strong>{{ actions[item.action] }}</strong> &middot; {{ item.target_name }}
-        <small>Oleh {{ item.actor_name or 'Inisialisasi sistem' }} &middot; {{ item.created_at }}</small></li>{% else %}<li>Belum ada aktivitas akun.</li>{% endfor %}</ul>
+      <ul class="account-history">{% for item in history %}<li><strong>{{ actions[item.action] }}</strong>, {{ item.target_name }}
+        <small>Oleh {{ item.actor_name or 'Inisialisasi sistem' }}, <time>{{ item.created_at }}</time></small></li>{% else %}<li>Belum ada aktivitas akun.</li>{% endfor %}</ul>
     </section>
     {% else %}
     <section class="panel password-panel"><h2>{{ current_user.display_name }}</h2>
-      <p>{{ current_user.email }} &middot; {{ role_labels[current_user.role] }}</p>
+      <p>{{ role_labels[current_user.role] }}, {{ current_user.email }}</p>
       <form method="post" class="account-form">
         <input type="hidden" name="token" value="{{ csrf_token }}">
         <label>Kata sandi saat ini<input name="current_password" type="password" autocomplete="current-password" maxlength="1024" required></label>

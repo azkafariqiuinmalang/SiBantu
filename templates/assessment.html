@@ -8,21 +8,22 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='ahp-form.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='img/logo/favicon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo/apple-touch-icon.png') }}">
   <script src="{{ url_for('static', filename='ahp-form.js') }}" defer></script>
 </head>
 <body>
   {% include '_navigation.html' %}
   <main class="shell" id="konten">
     <div class="intro">
-      {% if snapshot.get('is_simulation',true) %}<span class="badge">Simulasi</span>{% endif %}
       <h1>{{ 'Hasil kelompok' if section == 'results' else 'Penilaian prioritas bantuan' }}</h1>
-      <p>{{ snapshot.name.split(' (SIMULASI)')[0] }} · Ronde {{ record.id }} · {{ snapshot.districts | length }} kecamatan</p>
+      <p>{% if snapshot.get('is_simulation',true) %}<span class="badge">Simulasi</span> {% endif %}{{ snapshot.name.split(' (SIMULASI)')[0] }}, ronde {{ record.id }}, {{ snapshot.districts | length }} kecamatan</p>
       {% if record.case_id %}<a href="{{ url_for('fieldwork_case',case_id=record.case_id) }}">Lihat pendataan kejadian</a>{% endif %}
     </div>
     {% if is_legacy %}<p class="simulation-note">Ronde ini adalah arsip dengan definisi C6 sebelumnya. Penilaian baru menggunakan ronde terbaru dengan C6 jarak posko induk ke titik gempa (km).</p>{% endif %}
     {% if rounds|length > 1 %}<form class="round-selector" method="get">
       <label for="round_id">Ronde penilaian</label><select name="round_id" id="round_id">
-        {% for item in rounds %}<option value="{{ item.id }}" {% if item.id == record.id %}selected{% endif %}>Ronde {{ item.id }} · {{ item.name }}</option>{% endfor %}
+        {% for item in rounds %}<option value="{{ item.id }}" {% if item.id == record.id %}selected{% endif %}>Ronde {{ item.id }}, {{ item.name }}</option>{% endfor %}
       </select><button class="secondary">Tampilkan</button>
     </form>{% endif %}
     {% set progress = results | length %}
@@ -40,13 +41,13 @@
         {% endfor %}
       </div>
     </aside>
-    {% if message %}<p class="alert" role="alert">{{ message }}</p>{% endif %}
+    {% if message %}<p class="alert" role="alert">{{ message }}{% if hints %} <a href="#ahp-hints-title">Lihat saran pasangan</a>{% endif %}</p>{% endif %}
 
     {% if section == 'assessment' %}
     <details class="panel snapshot">
       <summary>Data kecamatan yang dikunci untuk ronde ini</summary>
       <p>{{ snapshot.source }}</p>
-      <p>Waktu kejadian <time datetime="{{ snapshot.incident_at }}">{{ snapshot.incident_at|datetime_display_wib }}</time> · Snapshot dikunci <time datetime="{{ record.locked_at }}">{{ record.locked_at|datetime_display_wib }}</time></p>
+      <p>Waktu kejadian <time datetime="{{ snapshot.incident_at }}">{{ snapshot.incident_at|datetime_display_wib }}</time>. Snapshot dikunci <time datetime="{{ record.locked_at }}">{{ record.locked_at|datetime_display_wib }}</time></p>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel kondisi kecamatan"><table>
         <thead><tr><th scope="col">Kecamatan</th>{% for code, name, unit, direction in criteria %}
           <th scope="col">{{ code }}<br><small>{{ name }} ({{ unit }})</small></th>
@@ -75,7 +76,7 @@
             {% set idx = loop.index0 %}
             {% set left = criteria[i] %}
             {% set right = criteria[j] %}
-            <div class="pair" data-left="{{ left[1] }}" data-right="{{ right[1] }}">
+            <div class="pair" data-left="{{ left[1] }}" data-right="{{ right[1] }}" data-left-index="{{ i }}" data-right-index="{{ j }}" data-left-code="{{ left[0] }}" data-right-code="{{ right[0] }}">
               <label for="pair-{{ idx }}">
                 <strong>{{ left[0] }}</strong> {{ left[1] }}
                 <span class="versus">dan</span>
@@ -110,7 +111,31 @@
         <h2>Konsistensi AHP</h2>
         {% if preview %}
           <p class="cr">{{ '%.4f' | format(preview.cr) }} <span>{{ 'Konsisten' if preview.valid else 'Perlu revisi' }}</span></p>
-          <p>CR ≤ 0,10 · CI {{ '%.4f' | format(preview.ci) }} · λ maks {{ '%.4f' | format(preview.lambda_max) }}</p>
+          <p>Batas CR ≤ 0,10. CI <span class="mono">{{ '%.4f' | format(preview.ci) }}</span>, λ maks <span class="mono">{{ '%.4f' | format(preview.lambda_max) }}</span></p>
+          {% if hints %}
+          {% macro say(value, i, j) -%}
+            {%- set words = {3:'sedikit lebih penting',5:'lebih penting secara kuat',7:'sangat lebih penting',9:'mutlak lebih penting'} -%}
+            {%- set between = {2:'sama penting dan sedikit lebih penting',4:'sedikit dan kuat',6:'kuat dan sangat',8:'sangat dan mutlak'} -%}
+            {%- set n = (value[2:] if value.startswith('1/') else value)|int -%}
+            {%- set winner, other = (criteria[j][1], criteria[i][1]) if value.startswith('1/') else (criteria[i][1], criteria[j][1]) -%}
+            {%- if value == '1' -%}{{ criteria[i][1] }} dan {{ criteria[j][1] }} sama penting (skala 1)
+            {%- elif n % 2 -%}{{ winner }} {{ words[n] }} daripada {{ other }} (skala {{ n }})
+            {%- else -%}{{ winner }} lebih penting daripada {{ other }}, nilai antara {{ between[n] }} (skala {{ n }}){%- endif -%}
+          {%- endmacro %}
+          <div class="ahp-hints" role="region" aria-labelledby="ahp-hints-title">
+            <h3 id="ahp-hints-title">Pasangan yang paling memengaruhi CR</h3>
+            <p>Saran ini tidak mengubah jawaban Anda. Ubah hanya bila sesuai dengan pertimbangan Anda.</p>
+            <ol class="ahp-hint-list">{% for hint in hints %}
+              <li data-pair="{{ hint.index }}" data-chosen="{{ hint.chosen }}">
+                <strong>Pasangan {{ hint.index + 1 }}: {{ criteria[hint.left][0] }} dan {{ criteria[hint.right][0] }}</strong>
+                <p>Pilihan Anda: {{ say(hint.chosen, hint.left, hint.right) }}.</p>
+                <p>Lebih konsisten: <strong class="ahp-hint-suggestion">{{ say(hint.suggested, hint.left, hint.right) }}</strong>.</p>
+                <small>Jika hanya pasangan ini yang diubah, CR menjadi sekitar {{ ('%.4f' | format(hint.cr_after)).replace('.', ',') }}{{ ' (lolos batas 0,10)' if hint.cr_after <= 0.1 else ' (masih perlu perubahan lain)' }}.</small>
+                {% if role not in results and not is_legacy %}<a class="ahp-hint-link" href="#pair-{{ hint.index }}" data-pair="{{ hint.index }}">Ubah pasangan {{ hint.index + 1 }}</a>{% endif %}
+              </li>{% endfor %}
+            </ol>
+          </div>
+          {% endif %}
           <table>
             <thead><tr><th scope="col">Kriteria</th><th scope="col">Bobot</th></tr></thead>
             <tbody>{% for weight in preview.weights %}<tr><th scope="row">{{ criteria[loop.index0][0] }}</th>
@@ -134,7 +159,7 @@
 
     {% macro topsis_details(result, label) %}
       <section class="panel">
-        <h2>TOPSIS · {{ label }}</h2>
+        <h2>TOPSIS {{ label }}</h2>
         {% if result.identical %}<p>Seluruh alternatif identik. Nilai preferensi ditetapkan 0,5.</p>{% endif %}
         {% if result.zero_columns %}<p>Kolom bernilai nol: {{ result.zero_columns | join(', ') }}.</p>{% endif %}
         <div class="table-wrap"><table>
@@ -155,8 +180,8 @@
               <tr><th scope="row">{{ label }}</th>{% for value in values %}<td>{{ '%.5f' | format(value) }}</td>{% endfor %}</tr>
               {% endfor %}
               {% for row in result.rows %}
-              <tr><th scope="row">{{ row.code }} · Normalisasi</th>{% for value in row.normalized %}<td>{{ '%.5f' | format(value) }}</td>{% endfor %}</tr>
-              <tr><th scope="row">{{ row.code }} · Terbobot</th>{% for value in row.weighted %}<td>{{ '%.5f' | format(value) }}</td>{% endfor %}</tr>
+              <tr><th scope="row">{{ row.code }} normalisasi</th>{% for value in row.normalized %}<td>{{ '%.5f' | format(value) }}</td>{% endfor %}</tr>
+              <tr><th scope="row">{{ row.code }} terbobot</th>{% for value in row.weighted %}<td>{{ '%.5f' | format(value) }}</td>{% endfor %}</tr>
               {% endfor %}
             </tbody>
           </table></div>
@@ -171,7 +196,7 @@
 
     {% if section == 'results' %}
       <section class="panel">
-        <div class="section-head"><h2>Rekomendasi prioritas · Borda</h2>
+        <div class="section-head"><h2>Rekomendasi prioritas Borda</h2>
           {% if group %}<span class="badge">{{ 'Disahkan' if record.finalized_at else 'Menunggu pengesahan' }}</span>{% endif %}
         </div>
         {% if group %}

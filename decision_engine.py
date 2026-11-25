@@ -1,7 +1,7 @@
 """Perhitungan deterministik untuk satu ronde penilaian."""
 
 from fractions import Fraction
-from math import isfinite, sqrt
+from math import isfinite, log, sqrt
 
 CR_LIMIT = 0.10
 TOLERANCE = 1e-12
@@ -51,6 +51,35 @@ def ahp(comparisons):
     cr = ci / 1.24
     return dict(matrix=matrix, weights=weights, lambda_max=lambda_max, ci=ci,
                 cr=cr, valid=cr <= CR_LIMIT + TOLERANCE)
+
+
+def inconsistency_hints(comparisons, limit=3):
+    """Pasangan yang paling menaikkan CR beserta nilai Saaty yang lebih konsisten.
+
+    Hanya saran tampilan: jawaban DM tidak diubah. Untuk setiap pasangan, nilai yang
+    disarankan adalah skala Saaty terdekat (skala log) dengan rasio bobot saat ini
+    w_i / w_j. Pasangan diurutkan menurut penurunan CR bila hanya pasangan itu yang
+    diganti, lalu indeks pasangan agar hasil deterministik.
+    """
+    current = ahp(comparisons)
+    if current["valid"]:
+        return []
+    weights = current["weights"]
+    options = [(value, float(Fraction(value))) for value in SCALE]
+    hints = []
+    for index, (i, j) in enumerate(PAIRS):
+        implied = weights[i] / weights[j]
+        suggested = min(options, key=lambda item: (abs(log(item[1] / implied)), item[1]))[0]
+        if suggested == comparisons[index]:
+            continue
+        trial = list(comparisons)
+        trial[index] = suggested
+        cr_after = ahp(trial)["cr"]
+        if cr_after < current["cr"] - TOLERANCE:
+            hints.append(dict(index=index, left=i, right=j, chosen=comparisons[index],
+                              suggested=suggested, cr_after=cr_after))
+    hints.sort(key=lambda item: (item["cr_after"], item["index"]))
+    return hints[:limit]
 
 
 def field_criterion_values(total, vulnerable, housing, services, stock, required, distance):

@@ -28,7 +28,6 @@
       {% if needs_update %}<p class="task-help">C6 perlu diperbarui menjadi jarak dalam kilometer.</p>{% else %}<p class="task-help">Catat kondisi, kebutuhan logistik, dan sumber observasi.</p>{% endif %}
       <a class="button-link task-action" href="{{ url_for('fieldwork_assignment',assignment_id=task.id) }}">
         {{ 'Lihat laporan' if task.status == 'SUBMITTED' else 'Perbarui laporan' if needs_update or task.status == 'VERIFIED' else 'Lanjutkan draf' if task.status == 'DRAFT' else 'Perbaiki laporan' if task.status == 'REJECTED' else 'Isi laporan' }}
-        <span aria-hidden="true">&rarr;</span>
       </a>
     </article>
   {% else %}<div class="task-empty"><h3>Belum ada tugas pendataan</h3><p>Tugas kecamatan akan tampil setelah Kepala BPBD memberikan penugasan.</p></div>{% endfor %}
